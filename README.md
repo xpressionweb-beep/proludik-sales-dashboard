@@ -46,16 +46,41 @@ Voir `.env.example` pour la liste complète. En résumé :
     `SHOPIFY_CLIENT_SECRET`. Le token obtenu est mis en cache en mémoire et
     rafraîchi automatiquement (il expire après ~24h). Voir
     `server/connectors/shopify.js` (`getAccessToken`).
-- **InflatableOffice** : `IO_API_BASE_URL` et `IO_API_KEY`. Le connecteur
-  (`server/connectors/inflatableOffice.js`) est un adaptateur REST générique
-  écrit **sans documentation officielle de l'API IO en main** — il suppose un
-  `GET {IO_API_BASE_URL}{IO_SALES_ENDPOINT}?since=<ISO date>` avec
-  `Authorization: Bearer <IO_API_KEY>`, retournant un tableau JSON. Les noms de
-  champs (`IO_FIELD_ID`, `IO_FIELD_STATUS`, `IO_FIELD_AMOUNT`,
-  `IO_FIELD_REP`, `IO_FIELD_DATE`) sont ajustables par variable
-  d'environnement. **À valider/ajuster une fois la vraie forme de l'API IO
-  connue** — si elle diffère fortement (auth différente, pagination, etc.),
-  il faudra adapter `fetchFromApi()` dans ce fichier.
+- **InflatableOffice** (= plateforme **rental.software**, API6) :
+  `IO_API_BASE_URL` (ex: `https://rental.software/api6`) et `IO_API_KEY`.
+  D'après la documentation publique de rental.software, l'authentification se
+  fait par paramètre de requête `?apiKey=...` (pas un header
+  `Authorization: Bearer`) — c'est ce que fait
+  `server/connectors/inflatableOffice.js`. Les listes paginées suivent le
+  format `{ offset, limit, next, items: [...] }`, géré automatiquement.
+  **Endpoint des ventes** : ce compte IO n'a pas de module "sales"/"orders"
+  séparé — c'est le module **Leads** (contrats + paiements, confirmé via la
+  permission "Lead Payments") qui en tient lieu. `IO_SALES_ENDPOINT` pointe
+  donc par défaut vers `/leads`.
+
+  **Noms des champs confirmés** contre un extrait réel de `/leads` :
+  `IO_FIELD_ID=id`, `IO_FIELD_STATUS=statusid`, `IO_FIELD_AMOUNT=total`,
+  `IO_FIELD_REP=salesrep`, `IO_FIELD_DATE=createtime`.
+
+  **Statuts et représentants bruts (non mappés)** : `statusid` est un **code
+  numérique** (pas les libellés `Confirmé`/`Soumission`/`Contrat/VFR`) et
+  `salesrep` est un **ID numérique** de représentant (pas un nom). Pour
+  l'instant, le dashboard les affiche tels quels — ça veut dire concrètement
+  que :
+  - le comparatif "par statut" du dashboard regroupe toujours par les
+    libellés `Confirmé`/`Soumission`/`Contrat/VFR` (`config.io.statuses`
+    dans `server/config.js`) : tant qu'un mapping `statusid → libellé` n'est
+    pas ajouté, les vraies ventes IO tomberont dans le seau **"Autre"**
+    plutôt que d'être réparties par statut.
+  - la section "Ventes par représentant" affichera l'ID numérique brut du
+    `salesrep` au lieu d'un nom, et ne matchera donc pas les noms utilisés
+    dans `config/objectifs.json` (les objectifs resteront à `—` tant qu'un
+    mapping ID → nom n'est pas ajouté).
+
+  Ces deux mappings (statut et représentant) sont volontairement laissés
+  pour plus tard — à ajouter dans `server/connectors/inflatableOffice.js`
+  une fois la table de correspondance connue (ex. via l'admin IO ou un
+  export de la liste des statuts/représentants et leurs ID).
 
 Tant qu'un des deux connecteurs n'est pas configuré, il tourne en mode démo
 (données d'exemple) — un badge "mode démo" apparaît dans le dashboard pour
