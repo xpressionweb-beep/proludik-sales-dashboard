@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proludik — Tableau de bord des ventes</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Tableau de bord des ventes</h1>
+      <p class="subtitle">InflatableOffice &amp; Shopify</p>
+    </div>
+    <div class="topbar-meta">
+      <div id="syncBadges" class="sync-badges"></div>
+      <button id="syncNowBtn" class="btn">Synchroniser maintenant</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="stat-row" id="statRow" aria-label="Sommaire des ventes"></section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Comparatif par statut</h2>
+        <div class="tabs" id="periodTabs" role="tablist">
+          <button class="tab" data-period="week" role="tab">Semaine</button>
+          <button class="tab is-active" data-period="month" role="tab">Mois</button>
+          <button class="tab" data-period="year" role="tab">Année (fiscale)</button>
+        </div>
+      </div>
+
+      <div class="delta-line" id="deltaLine"></div>
+
+      <div class="panels" id="chartPanels"></div>
+
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Ventes par représentant</h2>
+        <div class="tabs" id="repPeriodTabs" role="tablist">
+          <button class="tab" data-period="week" role="tab">Semaine</button>
+          <button class="tab is-active" data-period="month" role="tab">Mois</button>
+          <button class="tab" data-period="year" role="tab">Année (fiscale)</button>
+        </div>
+      </div>
+      <p class="muted rep-period-label" id="repPeriodLabel"></p>
+      <div id="repList" class="rep-list"></div>
+      <p class="muted small">% calculé par rapport à l'objectif annuel proratisé (config/objectifs.json).</p>
+    </section>
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
