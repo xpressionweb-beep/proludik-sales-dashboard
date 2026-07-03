@@ -1,0 +1,17 @@
+{
+  "_comment": "Objectifs annuels de vente par representant, par annee financiere (1er octobre au 30 septembre). Le mensuel = annuel/12, l'hebdomadaire = annuel/52. Ajustez librement, redemarrage non requis pour l'API /api/reps (le fichier est relu a chaque appel).",
+  "reps": {
+    "Alexandre Roy": {
+      "2024-2025": 450000,
+      "2025-2026": 500000
+    },
+    "Marie Tremblay": {
+      "2024-2025": 380000,
+      "2025-2026": 420000
+    },
+    "Jean Dupont": {
+      "2024-2025": 300000,
+      "2025-2026": 350000
+    }
+  }
+}
