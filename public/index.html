@@ -3,56 +3,131 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proludik — Tableau de bord des ventes</title>
+  <title>Proludik — Votre entreprise. En temps réel.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>Tableau de bord des ventes</h1>
-      <p class="subtitle">InflatableOffice &amp; Shopify</p>
-    </div>
-    <div class="topbar-meta">
-      <div id="syncBadges" class="sync-badges"></div>
-      <button id="syncNowBtn" class="btn">Synchroniser maintenant</button>
-    </div>
-  </header>
-
-  <main>
-    <section class="stat-row" id="statRow" aria-label="Sommaire des ventes"></section>
-
-    <section class="card">
-      <div class="card-header">
-        <h2>Comparatif par statut</h2>
-        <div class="tabs" id="periodTabs" role="tablist">
-          <button class="tab" data-period="week" role="tab">Semaine</button>
-          <button class="tab is-active" data-period="month" role="tab">Mois</button>
-          <button class="tab" data-period="year" role="tab">Année (fiscale)</button>
+  <div class="app-shell">
+    <nav class="sidebar" aria-label="Navigation principale">
+      <div class="sidebar-logo">
+        <img
+          class="brand-mark"
+          src="assets/proludik_h_rouge_blanc.png"
+          alt="Proludik"
+          onerror="this.style.display='none'; document.getElementById('brandFallback').style.display='flex';"
+        />
+        <div class="brand-fallback" id="brandFallback">
+          <span class="brand-fallback-mark">P</span>
+          <span class="brand-fallback-text">PROLUDIK</span>
         </div>
       </div>
 
-      <div class="delta-line" id="deltaLine"></div>
+      <ul class="nav-list">
+        <li class="nav-item is-active"><span class="nav-icon" data-icon="home"></span>Accueil</li>
+        <li class="nav-item is-disabled" title="Bientôt disponible"><span class="nav-icon" data-icon="chart"></span>Ventes</li>
+        <li class="nav-item is-disabled" title="Bientôt disponible"><span class="nav-icon" data-icon="users"></span>Équipe</li>
+        <li class="nav-item is-disabled" title="Bientôt disponible"><span class="nav-icon" data-icon="funnel"></span>Pipeline</li>
+        <li class="nav-item is-disabled" title="Bientôt disponible"><span class="nav-icon" data-icon="truck"></span>Opérations</li>
+        <li class="nav-item is-disabled" title="Bientôt disponible"><span class="nav-icon" data-icon="cart"></span>Boutique</li>
+        <li class="nav-item is-disabled" title="Bientôt disponible"><span class="nav-icon" data-icon="megaphone"></span>Marketing</li>
+        <li class="nav-item is-disabled" title="Bientôt disponible"><span class="nav-icon" data-icon="doc"></span>Rapports</li>
+        <li class="nav-item is-disabled" title="Bientôt disponible"><span class="nav-icon" data-icon="gear"></span>Paramètres</li>
+      </ul>
 
-      <div class="panels" id="chartPanels"></div>
-
-      <div class="legend" id="legend"></div>
-    </section>
-
-    <section class="card">
-      <div class="card-header">
-        <h2>Ventes par représentant</h2>
-        <div class="tabs" id="repPeriodTabs" role="tablist">
-          <button class="tab" data-period="week" role="tab">Semaine</button>
-          <button class="tab is-active" data-period="month" role="tab">Mois</button>
-          <button class="tab" data-period="year" role="tab">Année (fiscale)</button>
-        </div>
+      <div class="sidebar-footer">
+        <p class="sidebar-tagline">DU <span class="accent">FUN</span> À 360°</p>
+        <p class="sidebar-subtagline">LOCATION • VENTE • FABRICATION<br />RÉPARATION • ÉVÉNEMENT</p>
       </div>
-      <p class="muted rep-period-label" id="repPeriodLabel"></p>
-      <div id="shopifyGoal" class="shopify-goal"></div>
-      <div id="repList" class="rep-list"></div>
-      <p class="muted small">% calculé par rapport à l'objectif annuel proratisé (config/objectifs.json).</p>
-    </section>
-  </main>
+    </nav>
+
+    <div class="main-col">
+      <header class="topbar">
+        <div class="topbar-datetime">
+          <span class="topbar-date" id="liveDate"></span>
+          <span class="topbar-time" id="liveTime"></span>
+        </div>
+        <div class="topbar-title">
+          VOTRE ENTREPRISE. <span class="accent">EN TEMPS RÉEL.</span>
+        </div>
+        <div class="topbar-fiscal">
+          <span class="nav-icon" data-icon="calendar"></span>
+          <div>
+            <div class="fiscal-label">Année financière</div>
+            <div class="fiscal-range" id="fiscalRange">—</div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="quick-metrics" id="quickMetrics" aria-label="Métriques rapides"></section>
+
+        <section class="big-cards" id="bigCards" aria-label="Sommaire des ventes"></section>
+
+        <section class="counters" id="counters" aria-label="Compteurs par statut"></section>
+
+        <div class="content-grid">
+          <section class="card table-card">
+            <div class="card-header">
+              <h2>Performance des représentants <span class="muted">(année financière)</span></h2>
+            </div>
+            <div class="table-scroll">
+              <table class="rep-table" id="repTable">
+                <thead>
+                  <tr>
+                    <th>Représentant</th>
+                    <th>Confirmés</th>
+                    <th>Soumissions</th>
+                    <th>VRF/Contrats</th>
+                    <th>Conversion</th>
+                    <th>Objectif</th>
+                    <th>Progression</th>
+                    <th>Score</th>
+                  </tr>
+                </thead>
+                <tbody id="repTableBody"></tbody>
+              </table>
+            </div>
+            <p class="muted small table-footnote">
+              Conversion = part des ventes "Confirmé" dans le total du représentant.
+              Score = % de l'objectif annuel (même valeur que la barre de progression).
+            </p>
+          </section>
+
+          <aside class="side-col">
+            <section class="card activity-card">
+              <div class="card-header">
+                <h2>Activité récente</h2>
+                <span class="live-dot"><span class="dot"></span>Données réelles</span>
+              </div>
+              <ul class="activity-list" id="activityList"></ul>
+            </section>
+
+            <section class="card alerts-card">
+              <div class="card-header">
+                <h2>Alertes</h2>
+              </div>
+              <p class="muted small alerts-placeholder">
+                Fonctionnalité à venir — nécessite des données supplémentaires
+                non disponibles aujourd'hui (suivi commercial, dépôts,
+                installations).
+              </p>
+            </section>
+          </aside>
+        </div>
+
+        <footer class="page-footer">
+          <span id="lastUpdate">—</span>
+          <span class="footer-sep">·</span>
+          <button id="syncNowBtn" class="link-btn">Synchroniser maintenant</button>
+          <span class="footer-sep">·</span>
+          <span id="syncBadges"></span>
+        </footer>
+      </main>
+    </div>
+  </div>
 
   <script src="dashboard.js"></script>
 </body>

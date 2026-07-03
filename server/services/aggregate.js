@@ -28,6 +28,16 @@ function fiscalYearLabel(date) {
 function getBounds(type, offset, referenceDate = new Date()) {
   const ref = new Date(referenceDate);
 
+  if (type === 'day') {
+    const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() + offset);
+    const end = addDays(start, 1);
+    return {
+      start,
+      end,
+      label: start.toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' }),
+    };
+  }
+
   if (type === 'week') {
     const day = ref.getDay(); // 0=dim..6=sam
     const diffToMonday = (day + 6) % 7;
@@ -100,9 +110,35 @@ function pctChange(current, previous) {
   return ((current - previous) / previous) * 100;
 }
 
+// Comparaison "meme periode l'an dernier" (pas la periode precedente):
+// semaine -> 52 semaines en arriere, mois -> meme mois l'an dernier,
+// annee (fiscale) -> annee fiscale precedente (deja "l'an dernier" par
+// definition). Utilise pour les 4 grandes cartes du dashboard.
+const YOY_OFFSET = { week: -52, month: -12, year: -1 };
+
+function getYoY(referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const result = {};
+
+  for (const [type, offset] of Object.entries(YOY_OFFSET)) {
+    const cur = getBounds(type, 0, referenceDate);
+    const prevYear = getBounds(type, offset, referenceDate);
+    const curTotals = computeTotals(sales, cur.start, cur.end);
+    const prevYearTotals = computeTotals(sales, prevYear.start, prevYear.end);
+
+    result[type] = {
+      current: { label: cur.label, totals: curTotals },
+      previousYear: { label: prevYear.label, totals: prevYearTotals },
+      changePct: pctChange(curTotals.grandTotal, prevYearTotals.grandTotal),
+    };
+  }
+
+  return result;
+}
+
 function getOverview(referenceDate = new Date()) {
   const sales = db.getAllSales();
-  const types = ['week', 'month', 'year'];
+  const types = ['day', 'week', 'month', 'year'];
   const overview = {};
 
   for (const type of types) {
@@ -141,17 +177,28 @@ function getRepBreakdown(type, offset = 0, referenceDate = new Date()) {
     }
 
     const rep = sale.rep || 'Non assigné';
-    if (!byRep.has(rep)) byRep.set(rep, { rep, amount: 0, count: 0 });
+    if (!byRep.has(rep)) {
+      const byStatus = {};
+      for (const status of config.io.statuses) byStatus[status] = 0;
+      byRep.set(rep, { rep, amount: 0, count: 0, byStatus });
+    }
     const entry = byRep.get(rep);
     entry.amount += sale.amount;
     entry.count += 1;
+    if (sale.source === 'io' && config.io.statuses.includes(sale.status)) {
+      entry.byStatus[sale.status] += sale.amount;
+    }
   }
 
   const rows = Array.from(byRep.values()).map((entry) => {
     const annualTarget = objectifs.reps && objectifs.reps[entry.rep] && objectifs.reps[entry.rep][fyLabel];
     const target = annualTarget ? annualTarget / divisor : null;
     const pct = target ? (entry.amount / target) * 100 : null;
-    return { ...entry, target, pct };
+    // Taux de conversion: part des ventes "Confirmé" dans le total du
+    // representant (definition maison, pas de standard fourni par le
+    // client - a ajuster si une autre formule est souhaitee).
+    const conversion = entry.amount > 0 ? (entry.byStatus['Confirmé'] / entry.amount) * 100 : null;
+    return { ...entry, target, pct, conversion };
   });
 
   rows.sort((a, b) => b.amount - a.amount);
@@ -172,4 +219,88 @@ function getRepBreakdown(type, offset = 0, referenceDate = new Date()) {
   };
 }
 
-module.exports = { getBounds, computeTotals, getOverview, getRepBreakdown, fiscalYearLabel };
+// Objectif annuel global de l'entreprise (carte "Objectif annuel"):
+// chiffre reel fourni par le client dans config/objectifs.json (pas une
+// somme calculee des objectifs individuels), compare au total reel de
+// l'annee financiere en cours.
+function getGlobalObjective(referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const objectifs = loadObjectifs();
+  const { start, end } = getBounds('year', 0, referenceDate);
+  const fyLabel = fiscalYearLabel(start);
+
+  const amount = computeTotals(sales, start, end).grandTotal;
+  const target = (objectifs.global && objectifs.global[fyLabel]) || null;
+  const pct = target ? (amount / target) * 100 : null;
+
+  return { fiscalYear: fyLabel, amount, target, pct };
+}
+
+// Serie de points reels pour la mini-sparkline de chaque grande carte:
+// - "day"/"week": un point par jour de la semaine en cours (jusqu'a aujourd'hui)
+// - "month": un point par jour du mois en cours (jusqu'a aujourd'hui)
+// - "year": un point par mois de l'annee financiere en cours (jusqu'au mois en cours)
+// Aucune donnee inventee: chaque point vient de computeTotals() sur les
+// vraies ventes stockees.
+function getTrend(cardType, referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const points = [];
+
+  if (cardType === 'week') {
+    const { start } = getBounds('week', 0, referenceDate);
+    const today = new Date(referenceDate);
+    today.setHours(0, 0, 0, 0);
+    for (let d = new Date(start); d <= today; d = addDays(d, 1)) {
+      const dayEnd = addDays(d, 1);
+      points.push({ label: d.toLocaleDateString('fr-CA', { weekday: 'short' }), amount: computeTotals(sales, d, dayEnd).grandTotal });
+    }
+  } else if (cardType === 'month') {
+    const { start } = getBounds('month', 0, referenceDate);
+    const today = new Date(referenceDate);
+    today.setHours(0, 0, 0, 0);
+    for (let d = new Date(start); d <= today; d = addDays(d, 1)) {
+      const dayEnd = addDays(d, 1);
+      points.push({ label: String(d.getDate()), amount: computeTotals(sales, d, dayEnd).grandTotal });
+    }
+  } else if (cardType === 'year') {
+    const { start } = getBounds('year', 0, referenceDate);
+    const ref = new Date(referenceDate);
+    for (let m = new Date(start); m <= ref; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+      const monthEnd = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+      points.push({ label: m.toLocaleDateString('fr-CA', { month: 'short' }), amount: computeTotals(sales, m, monthEnd).grandTotal });
+    }
+  } else {
+    throw new Error(`Type de tendance inconnu: ${cardType}`);
+  }
+
+  return points;
+}
+
+// Flux "activite en direct": les N ventes reelles les plus recentes (tous
+// statuts/sources confondus), triees par date de vente. Pas d'evenements
+// fabriques - juste une vue recente des vraies donnees synchronisees.
+function getRecentActivity(limit = 8) {
+  const sales = db.getAllSales();
+  return [...sales]
+    .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
+    .slice(0, limit)
+    .map((s) => ({
+      source: s.source,
+      status: s.source === 'io' ? s.status : 'Shopify',
+      rep: s.rep,
+      amount: s.amount,
+      orderDate: s.orderDate,
+    }));
+}
+
+module.exports = {
+  getBounds,
+  computeTotals,
+  getOverview,
+  getYoY,
+  getRepBreakdown,
+  getGlobalObjective,
+  getTrend,
+  getRecentActivity,
+  fiscalYearLabel,
+};
