@@ -32,6 +32,7 @@ async function requestAccessToken() {
     // Marge de securite de 5 minutes avant l'expiration reelle.
     expiresAt: Date.now() + expiresInMs - 5 * 60 * 1000,
   };
+  console.log(`[shopify] Token OAuth (client credentials) obtenu, expire dans ${Math.round(expiresInMs / 1000)}s.`);
   return cachedToken.value;
 }
 
