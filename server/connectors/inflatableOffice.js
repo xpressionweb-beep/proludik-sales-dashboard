@@ -99,6 +99,19 @@ function buildEndpointUrl(baseUrl, endpoint) {
   return new URL(`${base}/${path}`);
 }
 
+// Le lien "next" renvoye par rental.software est construit par LEUR serveur
+// pour leur propre pagination - il ne reprend pas notre parametre "apiKey".
+// Sans ce ré-ajout, la page 2+ part sans cle et echoue en 401 ("No API Key
+// provided"), meme si la page 1 (construite par buildEndpointUrl, qui
+// ajoute apiKey explicitement) fonctionne. On force donc apiKey a chaque
+// page, y compris si "next" est une URL absolue.
+function withApiKey(urlString, baseUrl, apiKey) {
+  const isAbsolute = /^https?:\/\//i.test(urlString);
+  const url = isAbsolute ? new URL(urlString) : new URL(urlString, new URL(baseUrl).origin);
+  url.searchParams.set('apiKey', apiKey);
+  return url;
+}
+
 async function fetchFromApi(sinceIso) {
   const { baseUrl, apiKey, salesEndpoint } = config.io;
   const firstUrl = buildEndpointUrl(baseUrl, salesEndpoint);
@@ -114,7 +127,7 @@ async function fetchFromApi(sinceIso) {
 
     // Pagination "offset/limit" documentee par rental.software: la reponse
     // contient une URL "next" tant qu'il reste des pages.
-    url = json && typeof json.next === 'string' ? json.next : null;
+    url = json && typeof json.next === 'string' ? withApiKey(json.next, baseUrl, apiKey).toString() : null;
   }
 
   return records.map(mapRecord);
