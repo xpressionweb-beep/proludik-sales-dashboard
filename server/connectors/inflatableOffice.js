@@ -88,9 +88,20 @@ async function fetchPage(url) {
   return res.json();
 }
 
+// Joint baseUrl + endpoint sans perdre un segment de chemin de baseUrl.
+// ATTENTION: new URL(endpoint, baseUrl) ne fonctionne PAS ici - si endpoint
+// commence par "/", il remplace tout le chemin de baseUrl au lieu de s'y
+// ajouter (ex: new URL('/leads', 'https://host/api6') -> 'https://host/leads',
+// le "/api6" est perdu). D'ou ce join explicite.
+function buildEndpointUrl(baseUrl, endpoint) {
+  const base = baseUrl.replace(/\/+$/, '');
+  const path = endpoint.replace(/^\/+/, '');
+  return new URL(`${base}/${path}`);
+}
+
 async function fetchFromApi(sinceIso) {
   const { baseUrl, apiKey, salesEndpoint } = config.io;
-  const firstUrl = new URL(salesEndpoint, baseUrl);
+  const firstUrl = buildEndpointUrl(baseUrl, salesEndpoint);
   firstUrl.searchParams.set('apiKey', apiKey);
   firstUrl.searchParams.set('since', sinceIso);
 
