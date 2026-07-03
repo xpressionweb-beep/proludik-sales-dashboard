@@ -62,20 +62,29 @@ Voir `.env.example` pour la liste complète. En résumé :
   `IO_FIELD_ID=id`, `IO_FIELD_STATUS=statusid`, `IO_FIELD_AMOUNT=total`,
   `IO_FIELD_REP=salesrep`, `IO_FIELD_DATE=createtime`.
 
-  **Statuts et représentants bruts (non mappés)** : `statusid` est un **code
-  numérique** (pas les libellés `Confirmé`/`Soumission`/`Contrat/VFR`) et
-  `salesrep` est un **ID numérique** de représentant (pas un nom). Pour
-  l'instant, le dashboard les affiche tels quels — ça veut dire concrètement
-  que :
-  - le comparatif "par statut" du dashboard regroupe toujours par les
-    libellés `Confirmé`/`Soumission`/`Contrat/VFR` (`config.io.statuses`
-    dans `server/config.js`) : tant qu'un mapping `statusid → libellé` n'est
-    pas ajouté, les vraies ventes IO tomberont dans le seau **"Autre"**
-    plutôt que d'être réparties par statut.
-  - la section "Ventes par représentant" affichera l'ID numérique brut du
-    `salesrep` au lieu d'un nom, et ne matchera donc pas les noms utilisés
-    dans `config/objectifs.json` (les objectifs resteront à `—` tant qu'un
-    mapping ID → nom n'est pas ajouté).
+  **Mapping des statuts** (`STATUS_LABELS` dans
+  `server/connectors/inflatableOffice.js`) — table partielle confirmée par
+  le client :
+  | `statusid` | Libellé affiché |
+  |---|---|
+  | `40213` | Soumission |
+  | `40215` | Contrat/VFR |
+  | `40217` | Confirmé |
+  | `127955` | Contrat/VFR |
+
+  `40215` ("Contrat") et `127955` ("VFR/Cont.") sont deux codes IO distincts
+  qui se regroupent tous les deux sous le bucket dashboard "Contrat/VFR".
+  Tout `statusid` absent de cette table est affiché tel quel (code brut) et
+  tombe donc dans le seau **"Autre"** du dashboard — à compléter dans
+  `STATUS_LABELS` au fur et à mesure que d'autres codes sont identifiés.
+  Vérifié avec un serveur fixture local reproduisant la forme réelle de
+  `/leads` (auth réelle bloquée depuis cet environnement de développement).
+
+  **Représentants non mappés** : `salesrep` est un **ID numérique**, affiché
+  tel quel pour l'instant (pas de nom). La section "Ventes par
+  représentant" ne matchera donc pas les noms utilisés dans
+  `config/objectifs.json` tant qu'un mapping ID → nom n'est pas ajouté (les
+  objectifs resteront à `—`).
 
   Ces deux mappings (statut et représentant) sont volontairement laissés
   pour plus tard — à ajouter dans `server/connectors/inflatableOffice.js`

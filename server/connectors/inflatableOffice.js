@@ -18,6 +18,25 @@ const SOURCE = 'io';
 // confirme via la doc publique. A verifier/ajuster (IO_SALES_ENDPOINT et
 // IO_FIELD_*) une fois l'acces reel au compte disponible - voir README.
 
+// Mapping statusid -> libelle, confirme par le client (table partielle).
+// "Contrat" et "VFR/Cont." sont deux codes distincts cote IO qui se
+// regroupent tous les deux sous le bucket dashboard "Contrat/VFR".
+// A completer au fur et a mesure que d'autres codes sont identifies.
+const STATUS_LABELS = {
+  40213: 'Soumission',
+  40215: 'Contrat/VFR',
+  40217: 'Confirmé',
+  127955: 'Contrat/VFR',
+};
+
+// Traduit un statusid vers son libelle si connu; sinon retourne le code brut
+// (qui tombera naturellement dans le bucket "Autre" du dashboard, voir
+// aggregate.js).
+function mapStatus(rawStatus) {
+  const label = STATUS_LABELS[rawStatus];
+  return label || String(rawStatus);
+}
+
 function extractArray(json) {
   if (Array.isArray(json)) return json;
   if (Array.isArray(json.items)) return json.items;
@@ -33,7 +52,7 @@ function mapRecord(raw) {
   return {
     source: SOURCE,
     externalId: String(raw[fieldId]),
-    status: raw[fieldStatus] != null ? String(raw[fieldStatus]) : 'Inconnu',
+    status: raw[fieldStatus] != null ? mapStatus(raw[fieldStatus]) : 'Inconnu',
     rep: raw[fieldRep] != null ? String(raw[fieldRep]) : null,
     amount: parseFloat(raw[fieldAmount]) || 0,
     currency: raw.currency || 'CAD',
