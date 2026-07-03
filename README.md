@@ -36,8 +36,16 @@ Le dashboard est servi sur `http://localhost:3000` (port configurable via
 
 Voir `.env.example` pour la liste complète. En résumé :
 
-- **Shopify** : `SHOPIFY_SHOP` (ex: `my-shop.myshopify.com`) et
-  `SHOPIFY_ACCESS_TOKEN` (token Admin API d'une app privée/custom).
+- **Shopify** : `SHOPIFY_SHOP` (ex: `my-shop.myshopify.com`), puis :
+  - App legacy (créée avant le Dev Dashboard, avant janvier 2026) :
+    `SHOPIFY_ACCESS_TOKEN` (token Admin API statique).
+  - App créée via le **Dev Dashboard** Shopify (depuis janvier 2026) : ces
+    apps n'ont plus de token statique — le serveur utilise automatiquement
+    le flux OAuth **client credentials grant**
+    (`POST /admin/oauth/access_token`) avec `SHOPIFY_CLIENT_ID` et
+    `SHOPIFY_CLIENT_SECRET`. Le token obtenu est mis en cache en mémoire et
+    rafraîchi automatiquement (il expire après ~24h). Voir
+    `server/connectors/shopify.js` (`getAccessToken`).
 - **InflatableOffice** : `IO_API_BASE_URL` et `IO_API_KEY`. Le connecteur
   (`server/connectors/inflatableOffice.js`) est un adaptateur REST générique
   écrit **sans documentation officielle de l'API IO en main** — il suppose un
