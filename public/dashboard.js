@@ -1,220 +1,323 @@
 const money = new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 });
 const pctFmt = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+const num = new Intl.NumberFormat('fr-CA');
 
-const CATEGORIES = [
-  { key: 'Confirmé', label: 'Confirmé', varName: '--series-confirme', kind: 'io' },
-  { key: 'Soumission', label: 'Soumission', varName: '--series-soumission', kind: 'io' },
-  { key: 'Contrat/VFR', label: 'Contrat/VFR', varName: '--series-contrat', kind: 'io' },
-  { key: 'Autre', label: 'Autre (IO)', varName: '--series-autre', kind: 'io' },
-  { key: 'Shopify', label: 'Shopify', varName: '--series-shopify', kind: 'shopify' },
-];
+// ---------- Icones (SVG minimalistes, trait = currentColor) ----------
+const ICON_PATHS = {
+  home: '<path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  chart: '<path d="M4 20V10M11 20V4M18 20v-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  users: '<circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 8a3 3 0 110 0M15 14c2.8.3 5 2.8 5 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  funnel: '<path d="M4 5h16l-6 7v6l-4 2v-8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  truck: '<path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.6" fill="currentColor"/><circle cx="17" cy="18" r="1.6" fill="currentColor"/>',
+  cart: '<circle cx="9" cy="20" r="1.4" fill="currentColor"/><circle cx="17" cy="20" r="1.4" fill="currentColor"/><path d="M3 4h2l2.2 11h10.6L20 8H6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  megaphone: '<path d="M3 10v4h3l6 4V6L6 10H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 9a4 4 0 010 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  doc: '<path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12h6M9 16h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  gear: '<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  clock: '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  contract: '<path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 13l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  dollar: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 6v12M15 9.5c0-1.4-1.3-2.2-3-2.2s-3 .9-3 2.1c0 3 6 1.4 6 4.4 0 1.3-1.3 2.2-3 2.2s-3-.9-3-2.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>',
+  trendUp: '<path d="M4 16l6-6 4 4 6-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  soumission: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>',
+  vrf: '<path d="M4 20l2-6 10-10 4 4-10 10-6 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  arrowUp: '<path d="M12 19V6M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  arrowDown: '<path d="M12 5v13M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  alertTriangle: '<path d="M12 4l9 16H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="17" r="0.9" fill="currentColor"/>',
+};
 
-let chartPeriod = 'month';
-let repPeriod = 'month';
-let overviewData = null;
+function iconSvg(name) {
+  return `<svg viewBox="0 0 24 24">${ICON_PATHS[name] || ''}</svg>`;
+}
 
+function renderStaticIcons() {
+  document.querySelectorAll('[data-icon]').forEach((el) => {
+    el.innerHTML = iconSvg(el.dataset.icon);
+  });
+}
+
+// ---------- Horloge / date en direct ----------
+function updateClock() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+  const timeStr = now.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('liveDate').textContent = dateStr;
+  document.getElementById('liveTime').textContent = timeStr;
+}
+
+// ---------- Fetch helper ----------
 async function fetchJson(url, opts) {
   const res = await fetch(url, opts);
   if (!res.ok) throw new Error(`${url} -> ${res.status}`);
   return res.json();
 }
 
-function bucketsFromTotals(totals) {
-  // Retourne les buckets a afficher, dans l'ordre fixe, en omettant "Autre" s'il est vide.
-  return CATEGORIES.filter((c) => {
-    if (c.key === 'Autre') {
-      return totals.io.Autre && totals.io.Autre.amount > 0;
-    }
-    return true;
-  }).map((c) => {
-    const amount = c.kind === 'shopify' ? totals.shopify.amount : totals.io[c.key].amount;
-    return { ...c, amount };
-  });
+function repInitials(name) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-function renderStatRow(overview) {
-  const el = document.getElementById('statRow');
-  const defs = [
-    { type: 'week', title: 'Semaine en cours' },
-    { type: 'month', title: 'Mois en cours' },
-    { type: 'year', title: 'Année financière en cours' },
+function deltaBadgeHtml(changePct) {
+  if (changePct === null || Number.isNaN(changePct)) return '<span class="delta-badge muted">—</span>';
+  const cls = changePct >= 0 ? 'up' : 'down';
+  const icon = changePct >= 0 ? 'arrowUp' : 'arrowDown';
+  return `<span class="delta-badge ${cls}"><span class="nav-icon" style="width:12px;height:12px">${iconSvg(icon)}</span>${pctFmt(changePct)}</span>`;
+}
+
+function sparklineHtml(points) {
+  const max = Math.max(1, ...points.map((p) => p.amount));
+  return `<div class="sparkline">${points
+    .map((p) => `<div class="bar" style="height:${Math.max(4, (p.amount / max) * 100)}%" title="${p.label}: ${money.format(p.amount)}"></div>`)
+    .join('')}</div>`;
+}
+
+// ---------- Bandeau de metriques rapides ----------
+async function renderQuickMetrics() {
+  const overview = await fetchJson('/api/overview');
+  const day = overview.day;
+  const ioCountToday = Object.values(day.current.totals.io).reduce((s, b) => s + b.count, 0);
+  const salesToday = day.current.totals.grandTotal;
+  const changePct = day.changePct;
+
+  const items = [
+    { icon: 'contract', value: num.format(ioCountToday), label: 'Contrats aujourd\'hui' },
+    { icon: 'dollar', value: money.format(salesToday), label: 'Ventes aujourd\'hui' },
+    { icon: 'trendUp', value: changePct === null ? '—' : pctFmt(changePct), label: 'vs hier' },
+    { icon: 'alertTriangle', value: null, label: 'Soumissions sans suivi' },
+    { icon: 'clock', value: null, label: 'Paiements en retard' },
+    { icon: 'vrf', value: null, label: 'Livraisons complétées' },
   ];
 
-  el.innerHTML = defs
-    .map(({ type, title }) => {
-      const period = overview[type];
-      const total = period.current.totals.grandTotal;
-      const changePct = period.changePct;
-      let deltaClass = 'flat';
-      let deltaText = 'stable vs période précédente';
-      if (changePct !== null) {
-        deltaClass = changePct > 0.05 ? 'up' : changePct < -0.05 ? 'down' : 'flat';
-        deltaText = `${pctFmt(changePct)} vs période précédente`;
-      }
-      return `
-        <div class="stat-tile">
-          <div class="label">${title}</div>
-          <div class="value">${money.format(total)}</div>
-          <div class="delta ${deltaClass}">${deltaText}</div>
-        </div>`;
-    })
-    .join('');
-}
-
-function renderLegend(buckets) {
-  const el = document.getElementById('legend');
-  el.innerHTML = buckets
+  document.getElementById('quickMetrics').innerHTML = items
     .map(
-      (b) =>
-        `<span class="legend-item"><span class="legend-swatch" style="background:var(${b.varName})"></span>${b.label}</span>`
+      (it) => `
+      <div class="qm-item">
+        <div class="qm-icon">${iconSvg(it.icon)}</div>
+        <div>
+          <div class="qm-value ${it.value === null ? 'is-placeholder' : ''}">${it.value === null ? 'Bientôt disponible' : it.value}</div>
+          <div class="qm-label">${it.label}</div>
+        </div>
+      </div>`
     )
     .join('');
 }
 
-function renderPanel(title, totals, maxValue) {
-  const buckets = bucketsFromTotals(totals);
-  const rows = buckets
-    .map((b) => {
-      const widthPct = maxValue > 0 ? Math.max(2, (b.amount / maxValue) * 100) : 0;
+// ---------- Grandes cartes ----------
+async function renderBigCards() {
+  const [yoy, objective, trendWeek, trendMonth, trendYear] = await Promise.all([
+    fetchJson('/api/yoy'),
+    fetchJson('/api/objective'),
+    fetchJson('/api/trend?card=week'),
+    fetchJson('/api/trend?card=month'),
+    fetchJson('/api/trend?card=year'),
+  ]);
+
+  const yoyCard = (title, icon, data, trend) => {
+    return `
+    <div class="big-card">
+      <div class="big-card-title">${iconSvg(icon) ? `<span class="nav-icon">${iconSvg(icon)}</span>` : ''}${title}</div>
+      <div class="big-card-value">${money.format(data.current.totals.grandTotal)}</div>
+      <div class="big-card-compare">
+        <span class="compare-years">vs même période l'an dernier : <strong>${money.format(data.previousYear.totals.grandTotal)}</strong></span>
+        ${deltaBadgeHtml(data.changePct)}
+      </div>
+      ${sparklineHtml(trend)}
+    </div>`;
+  };
+
+  const objectivePct = objective.pct !== null ? Math.min(100, Math.max(0, objective.pct)) : 0;
+  const remaining = objective.target !== null ? Math.max(0, objective.target - objective.amount) : null;
+  const isGood = objective.pct !== null && objective.pct >= 100;
+
+  const objectiveCard = `
+    <div class="big-card">
+      <div class="big-card-title"><span class="nav-icon">${iconSvg('vrf')}</span>Objectif annuel</div>
+      <div class="big-card-value">${objective.target !== null ? money.format(objective.target) : 'Non configuré'}</div>
+      <div class="goal-progress-text"><span>Atteint</span><strong>${objective.pct !== null ? objective.pct.toFixed(0) : '—'}%</strong></div>
+      <div class="goal-progress-track"><div class="goal-progress-fill ${isGood ? 'good' : ''}" style="width:${objectivePct}%"></div></div>
+      <div class="big-card-compare">
+        <span class="compare-years">${
+          objective.target === null
+            ? 'Objectif non configuré (config/objectifs.json)'
+            : isGood
+            ? 'Objectif atteint ✓'
+            : `${money.format(remaining)} à atteindre`
+        }</span>
+      </div>
+    </div>`;
+
+  document.getElementById('bigCards').innerHTML =
+    yoyCard('Cette semaine', 'chart', yoy.week, trendWeek) +
+    yoyCard('Ce mois', 'calendar', yoy.month, trendMonth) +
+    yoyCard('Année financière', 'dollar', yoy.year, trendYear) +
+    objectiveCard;
+}
+
+// ---------- Compteurs de statut ----------
+async function renderCounters() {
+  const yoy = await fetchJson('/api/yoy');
+  const cur = yoy.year.current.totals.io;
+  const prev = yoy.year.previousYear.totals.io;
+
+  const defs = [
+    { key: 'Confirmé', label: 'Confirmés', icon: 'contract' },
+    { key: 'Soumission', label: 'Soumissions', icon: 'soumission' },
+    { key: 'Contrat/VFR', label: 'VRF / Contrats', icon: 'vrf' },
+  ];
+
+  document.getElementById('counters').innerHTML = defs
+    .map(({ key, label, icon }) => {
+      const curCount = cur[key].count;
+      const prevCount = prev[key].count;
+      const changePct = prevCount ? ((curCount - prevCount) / prevCount) * 100 : curCount > 0 ? null : 0;
       return `
-        <div class="bar-row">
-          <div class="cat-label">${b.label}</div>
-          <div class="bar-track">
-            <div class="bar-fill" style="width:${widthPct}%; background:var(${b.varName})"></div>
-          </div>
-          <div class="bar-value">${money.format(b.amount)}</div>
+        <div class="counter-card">
+          <div class="counter-title"><span class="nav-icon">${iconSvg(icon)}</span>${label}</div>
+          <div class="counter-value">${num.format(curCount)}</div>
+          <div class="counter-compare">vs ${num.format(prevCount)} ${deltaBadgeHtml(changePct)}</div>
         </div>`;
     })
     .join('');
+}
 
+// ---------- Tableau de performance des representants ----------
+function scoreRingHtml(pct) {
+  const clamped = pct === null ? 0 : Math.min(100, Math.max(0, pct));
+  const color = pct !== null && pct >= 100 ? 'var(--good)' : 'var(--brand-red)';
+  const deg = clamped * 3.6;
   return `
-    <div class="panel">
-      <p class="panel-title">${title}</p>
-      ${rows}
+    <div class="score-ring" style="background: conic-gradient(${color} ${deg}deg, var(--track) 0)">
+      <div class="score-ring-inner">${pct !== null ? Math.round(pct) : '—'}</div>
     </div>`;
 }
 
-function renderChartSection(overview, type) {
-  const period = overview[type];
-  const { current, previous, changePct } = period;
+function progressCellHtml(pct) {
+  const clamped = pct === null ? 0 : Math.min(100, Math.max(2, pct));
+  const cls = pct !== null && pct >= 100 ? 'good' : '';
+  return `
+    <div class="mini-progress-track"><div class="mini-progress-fill ${cls}" style="width:${clamped}%"></div></div>
+    <div class="progress-pct">${pct !== null ? pct.toFixed(0) + '%' : '—'}</div>`;
+}
 
-  const allBuckets = [...bucketsFromTotals(current.totals), ...bucketsFromTotals(previous.totals)];
-  const maxValue = Math.max(1, ...allBuckets.map((b) => b.amount));
+async function renderRepTable() {
+  const data = await fetchJson('/api/reps?period=year&offset=0');
+  const rows = [];
 
-  document.getElementById('chartPanels').innerHTML =
-    renderPanel(`Période actuelle — ${current.label}`, current.totals, maxValue) +
-    renderPanel(`Période précédente — ${previous.label}`, previous.totals, maxValue);
-
-  renderLegend(bucketsFromTotals(current.totals));
-
-  const deltaEl = document.getElementById('deltaLine');
-  if (changePct === null) {
-    deltaEl.textContent = '';
-  } else {
-    const cls = changePct > 0.05 ? 'up' : changePct < -0.05 ? 'down' : '';
-    deltaEl.innerHTML = `Total <strong>${money.format(current.totals.grandTotal)}</strong> vs <strong>${money.format(
-      previous.totals.grandTotal
-    )}</strong> (<span class="${cls}">${pctFmt(changePct)}</span>)`;
+  for (const r of data.reps) {
+    rows.push(`
+      <tr>
+        <td><div class="rep-name-cell"><span class="rep-avatar">${repInitials(r.rep)}</span>${r.rep}</div></td>
+        <td class="num-cell">${money.format(r.byStatus['Confirmé'])}</td>
+        <td class="num-cell">${money.format(r.byStatus['Soumission'])}</td>
+        <td class="num-cell">${money.format(r.byStatus['Contrat/VFR'])}</td>
+        <td class="num-cell">${r.conversion !== null ? r.conversion.toFixed(0) + '%' : '—'}</td>
+        <td class="num-cell">${r.target !== null ? money.format(r.target) : '—'}</td>
+        <td class="progress-cell">${progressCellHtml(r.pct)}</td>
+        <td>${scoreRingHtml(r.pct)}</td>
+      </tr>`);
   }
+
+  // Ligne "Web" (Shopify) - categorie distincte, pas de repartition par
+  // statut IO (Confirme/Soumission/VRF ne s'appliquent pas a Shopify).
+  const s = data.shopify;
+  rows.push(`
+    <tr>
+      <td><div class="rep-name-cell"><span class="rep-avatar" style="background:var(--brand-red)">WEB</span>Boutique Shopify</div></td>
+      <td class="num-cell" title="Total des ventes Shopify (pas de statut par vente)">${money.format(s.amount)}</td>
+      <td class="num-cell">—</td>
+      <td class="num-cell">—</td>
+      <td class="num-cell">—</td>
+      <td class="num-cell">${s.target !== null ? money.format(s.target) : '—'}</td>
+      <td class="progress-cell">${progressCellHtml(s.pct)}</td>
+      <td>${scoreRingHtml(s.pct)}</td>
+    </tr>`);
+
+  document.getElementById('repTableBody').innerHTML = rows.join('');
 }
 
-function goalRowHtml({ amount, target, pct }) {
-  const widthPct = pct !== null ? Math.min(100, Math.max(2, pct)) : 0;
-  const fillClass = pct !== null && pct >= 100 ? 'rep-fill good' : 'rep-fill';
-  const pctText = pct !== null ? `${pct.toFixed(0)}%` : '—';
-  const targetText = target !== null ? ` / objectif ${money.format(target)}` : ' (aucun objectif configuré)';
-  return { widthPct, fillClass, pctText, targetText };
+// ---------- Activite recente (donnees reelles) ----------
+function timeAgoOrDate(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  return sameDay
+    ? d.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' });
 }
 
-function renderShopifyGoal(shopify) {
-  const el = document.getElementById('shopifyGoal');
-  const { widthPct, fillClass, pctText, targetText } = goalRowHtml(shopify);
-  // L'accent Shopify ne s'applique que si l'objectif n'est pas deja atteint,
-  // pour laisser la couleur "good" (objectif atteint) primer sur l'accent
-  // de categorie (voir .rep-fill.good dans styles.css).
-  const fillStyle = fillClass.includes('good') ? '' : 'background:var(--series-shopify);';
-  el.innerHTML = `
-    <div class="rep-row shopify-goal-row">
-      <div class="rep-name"><span class="legend-swatch" style="background:var(--series-shopify)"></span>Boutique Shopify</div>
-      <div class="rep-track"><div class="${fillClass}" style="width:${widthPct}%; ${fillStyle}"></div></div>
-      <div class="rep-numbers"><span class="pct">${pctText}</span><br>${money.format(shopify.amount)}${targetText}</div>
-    </div>`;
-}
+async function renderActivity() {
+  const items = await fetchJson('/api/activity?limit=8');
+  const el = document.getElementById('activityList');
 
-async function renderReps(type) {
-  const data = await fetchJson(`/api/reps?period=${type}&offset=0`);
-  document.getElementById('repPeriodLabel').textContent = `${data.label} · Année financière ${data.fiscalYear}`;
-
-  renderShopifyGoal(data.shopify);
-
-  const el = document.getElementById('repList');
-  if (!data.reps.length) {
-    el.innerHTML = '<p class="muted small">Aucune vente sur cette période.</p>';
+  if (!items.length) {
+    el.innerHTML = '<p class="muted small">Aucune vente enregistrée pour le moment.</p>';
     return;
   }
 
-  el.innerHTML = data.reps
-    .map((r) => {
-      const { widthPct, fillClass, pctText, targetText } = goalRowHtml(r);
+  el.innerHTML = items
+    .map((it) => {
+      const isShopify = it.source === 'shopify';
+      const icon = isShopify ? 'cart' : it.status === 'Confirmé' ? 'contract' : it.status === 'Soumission' ? 'soumission' : 'vrf';
+      const title = isShopify ? 'Commande Shopify' : it.status;
+      const sub = it.rep ? it.rep : isShopify ? 'Boutique en ligne' : 'Représentant non assigné';
       return `
-        <div class="rep-row">
-          <div class="rep-name">${r.rep}</div>
-          <div class="rep-track"><div class="${fillClass}" style="width:${widthPct}%"></div></div>
-          <div class="rep-numbers"><span class="pct">${pctText}</span><br>${money.format(r.amount)}${targetText}</div>
-        </div>`;
+        <li class="activity-item">
+          <div class="activity-icon">${iconSvg(icon)}</div>
+          <div class="activity-body">
+            <div class="activity-row-top">
+              <span class="activity-title">${title}</span>
+              <span class="activity-amount">${money.format(it.amount)}</span>
+            </div>
+            <div class="activity-row-top">
+              <span class="activity-sub">${sub}</span>
+              <span class="activity-time">${timeAgoOrDate(it.orderDate)}</span>
+            </div>
+          </div>
+        </li>`;
     })
     .join('');
 }
 
-function renderSyncBadges(meta) {
-  const el = document.getElementById('syncBadges');
+// ---------- Meta / sync ----------
+async function renderMeta() {
+  const meta = await fetchJson('/api/meta');
   const sources = [
     { key: 'shopify', label: 'Shopify' },
     { key: 'io', label: 'InflatableOffice' },
   ];
 
-  el.innerHTML = sources
+  document.getElementById('syncBadges').innerHTML = sources
     .map(({ key, label }) => {
       const info = meta.sources[key] || {};
       const isMock = meta.mock[key];
       const hasError = Boolean(info.lastError);
-      const dotClass = hasError ? 'err' : isMock ? 'mock' : 'ok';
-      const when = info.lastSuccessAt ? new Date(info.lastSuccessAt).toLocaleString('fr-CA') : 'jamais';
-      const suffix = isMock ? ' (mode démo)' : hasError ? ` — erreur: ${info.lastError}` : '';
-      return `<span class="sync-badge"><span class="dot ${dotClass}"></span>${label} · ${when}${suffix}</span>`;
+      const suffix = isMock ? ' (mode démo)' : hasError ? ` — erreur` : '';
+      return `${label}${suffix}`;
     })
-    .join('');
+    .join(' · ');
+
+  const lastTimes = sources.map(({ key }) => meta.sources[key] && meta.sources[key].lastSuccessAt).filter(Boolean);
+  const latest = lastTimes.length ? new Date(Math.max(...lastTimes.map((t) => new Date(t).getTime()))) : null;
+  document.getElementById('lastUpdate').textContent = latest
+    ? `Données mises à jour à ${latest.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}`
+    : 'Aucune synchronisation encore';
 }
 
-function setupTabs(containerId, onChange) {
-  const container = document.getElementById(containerId);
-  container.addEventListener('click', (e) => {
-    const btn = e.target.closest('.tab');
-    if (!btn) return;
-    container.querySelectorAll('.tab').forEach((t) => t.classList.remove('is-active'));
-    btn.classList.add('is-active');
-    onChange(btn.dataset.period);
-  });
+// ---------- Annee financiere (haut a droite) ----------
+async function renderFiscalRange() {
+  const objective = await fetchJson('/api/objective');
+  const [y1, y2] = objective.fiscalYear.split('-');
+  document.getElementById('fiscalRange').textContent = `1 OCT. ${y1} - 30 SEPT. ${y2}`;
 }
 
 async function loadAll() {
-  const [overview, meta] = await Promise.all([fetchJson('/api/overview'), fetchJson('/api/meta')]);
-  overviewData = overview;
-  renderStatRow(overview);
-  renderChartSection(overview, chartPeriod);
-  renderSyncBadges(meta);
-  await renderReps(repPeriod);
+  await Promise.all([renderQuickMetrics(), renderBigCards(), renderCounters(), renderRepTable(), renderActivity(), renderMeta(), renderFiscalRange()]);
+  renderStaticIcons();
 }
-
-setupTabs('periodTabs', (type) => {
-  chartPeriod = type;
-  if (overviewData) renderChartSection(overviewData, chartPeriod);
-});
-
-setupTabs('repPeriodTabs', (type) => {
-  repPeriod = type;
-  renderReps(repPeriod);
-});
 
 document.getElementById('syncNowBtn').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
@@ -229,10 +332,14 @@ document.getElementById('syncNowBtn').addEventListener('click', async (e) => {
   }
 });
 
+renderStaticIcons();
+updateClock();
+setInterval(updateClock, 1000);
+
 loadAll().catch((err) => {
   console.error(err);
   document.querySelector('main').insertAdjacentHTML(
     'afterbegin',
-    `<p style="color:#d03b3b">Erreur de chargement du dashboard: ${err.message}</p>`
+    `<p style="color:#e6394a">Erreur de chargement du dashboard: ${err.message}</p>`
   );
 });

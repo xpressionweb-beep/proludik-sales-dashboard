@@ -22,5 +22,9 @@
   "shopify": {
     "_comment": "Objectif annuel de la boutique Shopify - categorie distincte des representants IO (pas de rep assigne).",
     "2025-2026": 200000
+  },
+  "global": {
+    "_comment": "Objectif annuel global de l'entreprise (carte 'Objectif annuel' du dashboard) - chiffre reel fourni par le client, independant de la somme des objectifs individuels ci-dessus.",
+    "2025-2026": 3200000
   }
 }

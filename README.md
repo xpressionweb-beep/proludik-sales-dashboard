@@ -10,12 +10,17 @@ consulter.
   "Synchroniser maintenant" dans le dashboard.
 - Stockage local simple (fichiers JSON dans `data/`), aucune base de données
   externe requise.
-- Dashboard web :
-  - Totaux par statut IO (**Confirmé**, **Soumission**, **Contrat/VFR**) et
-    pour Shopify.
-  - Comparatif semaine / mois / année financière (actuelle vs précédente).
-    Année financière = **1er octobre → 30 septembre**.
-  - Ventes par représentant avec % vs objectif (voir `config/objectifs.json`).
+- Dashboard web (thème sombre navy/rouge, police Barlow) :
+  - Bandeau de métriques rapides (contrats/ventes du jour, % vs hier).
+  - 4 grandes cartes avec sparkline : Cette semaine / Ce mois / Année
+    financière (comparées à **la même période l'an dernier**, pas la
+    période précédente) + Objectif annuel (chiffre réel, config/objectifs.json).
+  - 3 compteurs de statut IO (Confirmés / Soumissions / VRF-Contrats) vs
+    année fiscale précédente.
+  - Tableau "Performance des représentants" (par statut, conversion,
+    objectif, progression, score) + ligne "Boutique Shopify" distincte.
+  - Panneau "Activité récente" — dernières ventes réelles synchronisées.
+  - Année financière = **1er octobre → 30 septembre**.
 - **Mode démo (mock)** : si les identifiants Shopify ou InflatableOffice ne
   sont pas configurés, le connecteur correspondant génère des données
   d'exemple, pour pouvoir tester le serveur et le dashboard immédiatement.
@@ -132,13 +137,77 @@ plus bas).
 financière, ex. `"2025-2026": 200000`), **distincte des représentants** :
 les ventes Shopify ne sont pas attribuées à un représentant, donc cet
 objectif compare le **total des ventes Shopify de la période** (pas une
-somme par personne) à sa propre cible. Affiché dans le dashboard comme une
-ligne "Boutique Shopify" séparée en haut de la section "Ventes par
-représentant" (accent orange, même code couleur que "Shopify" dans le
-comparatif par statut), avec une bordure pour bien la distinguer des
-représentants individuels. Suit les mêmes onglets de période
-(semaine/mois/année) et la même logique de proratisation que les
-représentants (`getRepBreakdown` dans `server/services/aggregate.js`).
+somme par personne) à sa propre cible. Affiché comme dernière ligne
+("Boutique Shopify") du tableau "Performance des représentants" — mêmes
+colonnes Objectif/Progression/Score que les représentants, mais
+Confirmés/Soumissions/VRF-Contrats/Conversion affichés en `—` (ces
+statuts IO ne s'appliquent pas à une vente Shopify).
+
+### Objectif annuel global (carte "Objectif annuel")
+
+`config/objectifs.json` a une clé `global` (ex. `"2025-2026": 3200000`) —
+**chiffre réel fourni par le client**, indépendant de la somme des
+objectifs individuels ci-dessus (ce n'est pas un total calculé). Comparé
+au total réel de vente de l'année financière en cours
+(`getGlobalObjective()` dans `server/services/aggregate.js`).
+
+## Formules utilisées dans le tableau des représentants
+
+- **Conversion** = montant "Confirmé" du représentant ÷ montant total du
+  représentant × 100. Définition maison (pas de standard fourni par le
+  client) — à ajuster si une autre formule est souhaitée.
+- **Score** (anneau coloré) = **même valeur** que la barre "Progression"
+  (% de l'objectif annuel proratisé). Choix délibéré pour ne pas inventer
+  une deuxième métrique sans définition — voir section suivante.
+
+## Comparaisons "année précédente" (grandes cartes)
+
+Les 4 grandes cartes comparent **la même période l'an dernier**, pas la
+période immédiatement précédente : semaine → 52 semaines en arrière, mois
+→ même mois l'an dernier, année → année financière précédente
+(`getYoY()` dans `server/services/aggregate.js`, endpoint `/api/yoy`).
+Différent de `/api/overview` (`getOverview()`), qui compare toujours à la
+période immédiatement précédente (utilisé pour le bandeau "vs hier" et
+disponible pour d'éventuels futurs besoins).
+
+## Sparklines (mini-graphiques des grandes cartes)
+
+`getTrend(cardType)` (`/api/trend?card=week|month|year`) découpe la
+période de chaque carte en sous-unités réelles (jour par jour pour
+semaine/mois, mois par mois pour l'année financière), à partir des vraies
+ventes stockées — aucune donnée simulée.
+
+## Activité récente
+
+Le panneau "Activité récente" (`/api/activity`) liste les ventes réelles
+les plus récentes (toutes sources confondues), pas un flux d'événements
+fabriqué — voir `getRecentActivity()`.
+
+## Métriques non disponibles (affichées honnêtement)
+
+Ces éléments de la maquette originale n'ont pas de source de données
+actuellement et sont affichés comme "Bientôt disponible" (bandeau du haut)
+ou avec un message explicite (panneau "Alertes"), plutôt que d'inventer un
+chiffre :
+- Soumissions sans suivi, paiements en retard, % livraisons complétées
+  (bandeau de métriques rapides).
+- Alertes (soumissions sans suivi, contrats sans dépôt, retard
+  installations) — nécessiteraient un suivi commercial, des dépôts et un
+  calendrier d'installation qu'on ne synchronise pas aujourd'hui.
+
+## Logo
+
+Le header référence `public/assets/proludik_h_rouge_blanc.png` (logo
+horizontal rouge/blanc). **Le vrai fichier n'est pas encore dans le
+dépôt** — déposez-le à ce chemin exact (voir `public/assets/README.md`).
+Tant qu'il est absent, un logo de repli ("P" + "PROLUDIK" en CSS) s'affiche
+automatiquement ; aucune modification de code n'est nécessaire une fois le
+vrai fichier commité.
+
+La police **Barlow** est chargée depuis Google Fonts (`fonts.googleapis.com`)
+— nécessite un accès réseau sortant vers ce domaine en production (normal
+sur Render ; peut échouer dans un environnement de développement à accès
+réseau restreint, avec repli sur la police système).
 
 ## Statuts InflatableOffice suivis
 
@@ -164,16 +233,25 @@ server/
     api.js                endpoints REST (/api/overview, /api/reps, /api/meta, /api/sync)
 public/
   index.html, styles.css, dashboard.js   dashboard web (vanilla JS, sans build)
+  assets/               logo (voir section Logo ci-dessus)
 config/
-  objectifs.json          objectifs de vente par représentant
+  objectifs.json          objectifs de vente (représentants, Shopify, global)
 ```
 
 ## API
 
-- `GET /api/overview` — totaux par statut/source pour semaine, mois, année
-  fiscale (actuel + précédent + variation %).
-- `GET /api/reps?period=week|month|year&offset=0` — ventes par représentant
-  sur la période, avec objectif proratisé et %.
+- `GET /api/overview` — totaux par statut/source pour jour, semaine, mois,
+  année fiscale (actuel vs période **immédiatement précédente** + variation %).
+- `GET /api/yoy` — pareil, mais vs **la même période l'an dernier**
+  (utilisé par les 4 grandes cartes du dashboard).
+- `GET /api/reps?period=week|month|year&offset=0` — ventes par
+  représentant sur la période (par statut IO, conversion, objectif
+  proratisé, %) + ligne `shopify` distincte.
+- `GET /api/objective` — objectif annuel global vs total réel de l'année
+  financière en cours.
+- `GET /api/trend?card=week|month|year` — série de points réels pour la
+  sparkline de la carte correspondante.
+- `GET /api/activity?limit=8` — les N ventes réelles les plus récentes.
 - `GET /api/meta` — état de la dernière synchronisation par source (dernier
   succès, erreurs, mode démo).
 - `POST /api/sync` — déclenche une synchronisation manuelle immédiate.
