@@ -5,6 +5,16 @@ const IO_STATUSES = ['Confirmé', 'Soumission', 'Contrat/VFR'];
 module.exports = {
   port: parseInt(process.env.PORT, 10) || 3000,
   syncCron: process.env.SYNC_CRON || '*/30 * * * *',
+  // Timeout par requete HTTP individuelle (Shopify/IO). Sans ca, fetch()
+  // peut rester accroche indefiniment si la connexion reste ouverte sans
+  // reponse (pas de timeout par defaut sur le fetch natif de Node).
+  httpTimeoutMs: parseInt(process.env.HTTP_TIMEOUT_MS, 10) || 20000,
+  // Garde-fou global par source: meme si une requete individuelle ne
+  // timeout pas correctement pour une raison imprevue, la sync de cette
+  // source est forcee a echouer apres ce delai plutot que de bloquer
+  // indefiniment le flag "running" du scheduler (et donc tous les cycles
+  // cron suivants).
+  syncWatchdogMs: parseInt(process.env.SYNC_WATCHDOG_MS, 10) || 120000,
 
   shopify: {
     shop: process.env.SHOPIFY_SHOP || '',

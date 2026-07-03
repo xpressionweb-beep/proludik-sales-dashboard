@@ -7,7 +7,11 @@ consulter.
 ## Fonctionnalités
 
 - Synchronisation automatique (cron, par défaut `*/30 * * * *`) + bouton
-  "Synchroniser maintenant" dans le dashboard.
+  "Synchroniser maintenant" dans le dashboard. Chaque requête HTTP a un
+  timeout (`HTTP_TIMEOUT_MS`, 20s par défaut) + garde-fou global par source
+  (`SYNC_WATCHDOG_MS`, 120s) pour qu'une connexion accrochée (réseau, rate-limit)
+  échoue proprement au lieu de bloquer indéfiniment la sync et les cycles
+  cron suivants.
 - Stockage local simple (fichiers JSON dans `data/`), aucune base de données
   externe requise.
 - Dashboard web (thème sombre navy/rouge, police Barlow) :
@@ -115,6 +119,29 @@ Voir `.env.example` pour la liste complète. En résumé :
 Tant qu'un des deux connecteurs n'est pas configuré, il tourne en mode démo
 (données d'exemple) — un badge "mode démo" apparaît dans le dashboard pour
 cette source.
+
+## Fiabilité de la synchronisation (timeouts)
+
+Le `fetch()` natif de Node n'a **pas de timeout par défaut** : si une
+connexion reste ouverte sans jamais répondre (blip réseau, rate-limit qui
+ne ferme pas la socket), l'appel restait bloqué indéfiniment — ce qui
+gelait le flag `running` du scheduler et faisait sauter tous les cycles
+cron suivants ("déjà en cours"). Deux niveaux de protection :
+
+1. **Timeout par requête** (`HTTP_TIMEOUT_MS`, 20s par défaut) via
+   `AbortSignal.timeout()` sur chaque appel `fetch()` (Shopify et IO,
+   y compris l'obtention du token OAuth).
+2. **Garde-fou global par source** (`SYNC_WATCHDOG_MS`, 120s) dans
+   `server/services/sync.js` (`withWatchdog`) : même en cas de blocage
+   imprévu ailleurs (ex. pagination qui boucle sans jamais lever
+   d'erreur), la sync de cette source échoue proprement après ce délai au
+   lieu de bloquer indéfiniment. Un plafond de 500 pages
+   (`MAX_PAGES`) protège aussi contre une pagination "next" qui
+   bouclerait sur elle-même.
+
+Vérifié avec un serveur fixture qui accepte la connexion mais ne répond
+jamais : la sync échoue proprement après le timeout (au lieu de bloquer),
+et le cycle suivant s'exécute normalement (pas de "déjà en cours").
 
 ## Objectifs de vente par représentant
 

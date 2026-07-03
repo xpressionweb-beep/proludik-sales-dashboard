@@ -75,9 +75,16 @@ function mapRecord(raw) {
   };
 }
 
+// fetch() natif de Node n'a pas de timeout par defaut: sans ca, une requete
+// qui reste accrochee sans reponse (blip reseau, rate-limit qui ne ferme
+// pas la socket, etc.) bloquerait la sync indefiniment - et donc le flag
+// "running" du scheduler, qui ferait sauter tous les cycles cron suivants
+// ("deja en cours"). AbortSignal.timeout() force un echec propre apres
+// config.httpTimeoutMs.
 async function fetchPage(url) {
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(config.httpTimeoutMs),
   });
 
   if (!res.ok) {
@@ -87,6 +94,10 @@ async function fetchPage(url) {
 
   return res.json();
 }
+
+// Garde-fou: si l'API bouclait sur "next" (bug cote serveur), on prefere
+// echouer proprement plutot que paginer indefiniment.
+const MAX_PAGES = 500;
 
 // Joint baseUrl + endpoint sans perdre un segment de chemin de baseUrl.
 // ATTENTION: new URL(endpoint, baseUrl) ne fonctionne PAS ici - si endpoint
@@ -120,8 +131,14 @@ async function fetchFromApi(sinceIso) {
 
   const records = [];
   let url = firstUrl.toString();
+  let pageCount = 0;
 
   while (url) {
+    pageCount += 1;
+    if (pageCount > MAX_PAGES) {
+      throw new Error(`InflatableOffice API: plus de ${MAX_PAGES} pages, pagination "next" suspecte d'boucler - abandon.`);
+    }
+
     const json = await fetchPage(url);
     records.push(...extractArray(json));
 
