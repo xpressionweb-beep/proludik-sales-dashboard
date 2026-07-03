@@ -56,7 +56,11 @@ Voir `.env.example` pour la liste complète. En résumé :
   **Endpoint des ventes** : ce compte IO n'a pas de module "sales"/"orders"
   séparé — c'est le module **Leads** (contrats + paiements, confirmé via la
   permission "Lead Payments") qui en tient lieu. `IO_SALES_ENDPOINT` pointe
-  donc par défaut vers `/leads`.
+  donc par défaut vers `/leads`. `IO_API_BASE_URL` et `IO_SALES_ENDPOINT`
+  sont joints via `buildEndpointUrl()` (pas `new URL(endpoint, baseUrl)`, qui
+  supprime silencieusement tout segment de chemin de `baseUrl` si `endpoint`
+  commence par `/` — bug corrigé qui causait un 404 en prod, ex:
+  `https://host/api6` + `/leads` devenait `https://host/leads`).
 
   **Noms des champs confirmés** contre un extrait réel de `/leads` :
   `IO_FIELD_ID=id`, `IO_FIELD_STATUS=statusid`, `IO_FIELD_AMOUNT=total`,
