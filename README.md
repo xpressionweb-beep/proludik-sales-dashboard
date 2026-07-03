@@ -53,25 +53,21 @@ Voir `.env.example` pour la liste complète. En résumé :
   `Authorization: Bearer`) — c'est ce que fait
   `server/connectors/inflatableOffice.js`. Les listes paginées suivent le
   format `{ offset, limit, next, items: [...] }`, géré automatiquement.
-  **Point non résolu** : la doc publique ne documente que l'endpoint
-  `/rentals`, qui est le **catalogue d'inventaire** (les structures
-  gonflables), **pas les ventes/réservations**. Le vrai nom de l'endpoint des
-  ventes (`/bookings`, `/orders`, `/reservations`, ...) et les noms exacts des
-  champs (statut, montant, représentant, date) n'ont pas pu être confirmés
-  sans accès au compte réel.
+  **Endpoint des ventes** : ce compte IO n'a pas de module "sales"/"orders"
+  séparé — c'est le module **Leads** (contrats + paiements, confirmé via la
+  permission "Lead Payments") qui en tient lieu. `IO_SALES_ENDPOINT` pointe
+  donc par défaut vers `/leads`.
 
-  **Pour finaliser `IO_SALES_ENDPOINT` et les `IO_FIELD_*`** : le plus simple
-  est de lancer une requête manuelle contre votre compte et de partager la
-  réponse JSON (avec les données clients sensibles masquées si besoin), ex. :
-  ```bash
-  curl "https://rental.software/api6/<endpoint-a-confirmer>?apiKey=VOTRE_CLE"
-  ```
-  Sinon, dans l'admin rental.software, la section "API Keys" (Settings) ou le
-  centre d'aide (support.rental.software, recherche "API") devrait lister
-  l'endpoint exact utilisé pour les réservations/ventes. Une fois confirmé,
-  ajuster `IO_SALES_ENDPOINT` et les `IO_FIELD_*` dans `.env` — aucun
-  changement de code n'est nécessaire si la forme générale (JSON, champs à
-  plat) reste similaire.
+  **Les noms exacts des champs (`IO_FIELD_*`) restent à valider** : ce sont
+  des défauts génériques (`status`, `total`, `representative`, `date`), pas
+  encore confirmés contre la vraie forme JSON renvoyée par `/leads` — la
+  connexion réelle n'a pas pu être testée depuis cet environnement de
+  développement (réseau restreint). Une fois testé sur Render, si le
+  dashboard affiche des montants à `0 $` ou des statuts "Inconnu"/"Autre" de
+  façon inattendue, ajuster les `IO_FIELD_*` dans `.env` pour correspondre
+  aux vrais noms de champs de la réponse `/leads` (aucun changement de code
+  requis, sauf si la structure diffère fortement — champs imbriqués au lieu
+  d'être à plat, pagination différente, etc.).
 
 Tant qu'un des deux connecteurs n'est pas configuré, il tourne en mode démo
 (données d'exemple) — un badge "mode démo" apparaît dans le dashboard pour

@@ -23,11 +23,10 @@ module.exports = {
   io: {
     baseUrl: process.env.IO_API_BASE_URL || '',
     apiKey: process.env.IO_API_KEY || '',
-    // Pas de defaut: le vrai nom de l'endpoint des ventes/reservations n'a
-    // pas ete confirme (la doc publique rental.software ne couvre que le
-    // catalogue d'inventaire "/rentals"). Doit etre fourni explicitement une
-    // fois confirme avec le compte reel - voir README.
-    salesEndpoint: process.env.IO_SALES_ENDPOINT || '',
+    // Module "Leads" (contrats + paiements, cf. permission "Lead Payments")
+    // confirme par le client comme etant l'equivalent ventes/contrats de son
+    // compte IO - pas de module "sales"/"orders" separe.
+    salesEndpoint: process.env.IO_SALES_ENDPOINT || '/leads',
     fieldId: process.env.IO_FIELD_ID || 'id',
     fieldStatus: process.env.IO_FIELD_STATUS || 'status',
     fieldAmount: process.env.IO_FIELD_AMOUNT || 'total',
