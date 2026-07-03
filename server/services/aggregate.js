@@ -126,18 +126,26 @@ function getRepBreakdown(type, offset = 0, referenceDate = new Date()) {
   const { start, end, label } = getBounds(type, offset, referenceDate);
   const objectifs = loadObjectifs();
   const fyLabel = fiscalYearLabel(start);
+  const divisor = type === 'year' ? 1 : type === 'month' ? 12 : 52;
 
   const byRep = new Map();
+  let shopifyAmount = 0;
+  let shopifyCount = 0;
+
   for (const sale of sales) {
     if (!inRange(sale.orderDate, start, end)) continue;
+
+    if (sale.source === 'shopify') {
+      shopifyAmount += sale.amount;
+      shopifyCount += 1;
+    }
+
     const rep = sale.rep || 'Non assigné';
     if (!byRep.has(rep)) byRep.set(rep, { rep, amount: 0, count: 0 });
     const entry = byRep.get(rep);
     entry.amount += sale.amount;
     entry.count += 1;
   }
-
-  const divisor = type === 'year' ? 1 : type === 'month' ? 12 : 52;
 
   const rows = Array.from(byRep.values()).map((entry) => {
     const annualTarget = objectifs.reps && objectifs.reps[entry.rep] && objectifs.reps[entry.rep][fyLabel];
@@ -148,7 +156,20 @@ function getRepBreakdown(type, offset = 0, referenceDate = new Date()) {
 
   rows.sort((a, b) => b.amount - a.amount);
 
-  return { type, offset, label, fiscalYear: fyLabel, reps: rows };
+  // Objectif "boutique Shopify": categorie distincte des representants IO
+  // (le total de vente Shopify n'est pas attribue a un representant).
+  const shopifyAnnualTarget = objectifs.shopify && objectifs.shopify[fyLabel];
+  const shopifyTarget = shopifyAnnualTarget ? shopifyAnnualTarget / divisor : null;
+  const shopifyPct = shopifyTarget ? (shopifyAmount / shopifyTarget) * 100 : null;
+
+  return {
+    type,
+    offset,
+    label,
+    fiscalYear: fyLabel,
+    reps: rows,
+    shopify: { amount: shopifyAmount, count: shopifyCount, target: shopifyTarget, pct: shopifyPct },
+  };
 }
 
 module.exports = { getBounds, computeTotals, getOverview, getRepBreakdown, fiscalYearLabel };

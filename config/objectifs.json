@@ -1,22 +1,26 @@
 {
   "_comment": "Objectifs annuels de vente par representant, par annee financiere (1er octobre au 30 septembre). Le mensuel = annuel/12, l'hebdomadaire = annuel/52. Ajustez librement, redemarrage non requis pour l'API /api/reps (le fichier est relu a chaque appel).",
-  "_avertissement": "Noms alignes sur le mapping salesrep reel (server/connectors/inflatableOffice.js: REP_LABELS), mais les MONTANTS ci-dessous sont encore des valeurs d'exemple/placeholder - a remplacer par les vrais objectifs.",
+  "_avertissement": "2024-2025 reste une valeur d'exemple/placeholder (non fournie par le client) - seul 2025-2026 est confirme reel.",
   "reps": {
     "Mathis Beaupré": {
       "2024-2025": 450000,
-      "2025-2026": 500000
+      "2025-2026": 673003
     },
     "Cedric Paré": {
       "2024-2025": 380000,
-      "2025-2026": 420000
+      "2025-2026": 1291987
     },
     "Jerome Goulet": {
       "2024-2025": 300000,
-      "2025-2026": 350000
+      "2025-2026": 255004
     },
     "Didier Paradis": {
       "2024-2025": 300000,
-      "2025-2026": 350000
+      "2025-2026": 895003
     }
+  },
+  "shopify": {
+    "_comment": "Objectif annuel de la boutique Shopify - categorie distincte des representants IO (pas de rep assigne).",
+    "2025-2026": 200000
   }
 }

@@ -118,9 +118,34 @@ function renderChartSection(overview, type) {
   }
 }
 
+function goalRowHtml({ amount, target, pct }) {
+  const widthPct = pct !== null ? Math.min(100, Math.max(2, pct)) : 0;
+  const fillClass = pct !== null && pct >= 100 ? 'rep-fill good' : 'rep-fill';
+  const pctText = pct !== null ? `${pct.toFixed(0)}%` : '—';
+  const targetText = target !== null ? ` / objectif ${money.format(target)}` : ' (aucun objectif configuré)';
+  return { widthPct, fillClass, pctText, targetText };
+}
+
+function renderShopifyGoal(shopify) {
+  const el = document.getElementById('shopifyGoal');
+  const { widthPct, fillClass, pctText, targetText } = goalRowHtml(shopify);
+  // L'accent Shopify ne s'applique que si l'objectif n'est pas deja atteint,
+  // pour laisser la couleur "good" (objectif atteint) primer sur l'accent
+  // de categorie (voir .rep-fill.good dans styles.css).
+  const fillStyle = fillClass.includes('good') ? '' : 'background:var(--series-shopify);';
+  el.innerHTML = `
+    <div class="rep-row shopify-goal-row">
+      <div class="rep-name"><span class="legend-swatch" style="background:var(--series-shopify)"></span>Boutique Shopify</div>
+      <div class="rep-track"><div class="${fillClass}" style="width:${widthPct}%; ${fillStyle}"></div></div>
+      <div class="rep-numbers"><span class="pct">${pctText}</span><br>${money.format(shopify.amount)}${targetText}</div>
+    </div>`;
+}
+
 async function renderReps(type) {
   const data = await fetchJson(`/api/reps?period=${type}&offset=0`);
   document.getElementById('repPeriodLabel').textContent = `${data.label} · Année financière ${data.fiscalYear}`;
+
+  renderShopifyGoal(data.shopify);
 
   const el = document.getElementById('repList');
   if (!data.reps.length) {
@@ -130,10 +155,7 @@ async function renderReps(type) {
 
   el.innerHTML = data.reps
     .map((r) => {
-      const widthPct = r.pct !== null ? Math.min(100, Math.max(2, r.pct)) : 0;
-      const fillClass = r.pct !== null && r.pct >= 100 ? 'rep-fill good' : 'rep-fill';
-      const pctText = r.pct !== null ? `${r.pct.toFixed(0)}%` : '—';
-      const targetText = r.target !== null ? ` / objectif ${money.format(r.target)}` : ' (aucun objectif configuré)';
+      const { widthPct, fillClass, pctText, targetText } = goalRowHtml(r);
       return `
         <div class="rep-row">
           <div class="rep-name">${r.rep}</div>

@@ -193,3 +193,11 @@ main {
 .rep-fill.good { background: var(--good); }
 .rep-numbers { font-size: 12px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
 .rep-numbers .pct { font-weight: 600; color: var(--text-primary); }
+
+.shopify-goal-row {
+  padding-bottom: 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--grid);
+}
+.shopify-goal-row .rep-name { display: flex; align-items: center; gap: 6px; }
+.shopify-goal-row .rep-track { background: color-mix(in srgb, var(--series-shopify) 22%, var(--surface-1)); }
