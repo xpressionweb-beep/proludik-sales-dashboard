@@ -3,6 +3,16 @@ const { generateMockSales } = require('./mockData');
 
 const SOURCE = 'shopify';
 
+// fetch() natif de Node n'a pas de timeout par defaut: si la connexion
+// reste ouverte sans reponse (blip reseau, rate-limit qui ne ferme pas la
+// socket, etc.), l'appel peut rester accroche indefiniment - ce qui bloque
+// le flag "running" du scheduler et fait sauter tous les cycles cron
+// suivants ("deja en cours"). AbortSignal.timeout() force un echec propre
+// apres config.httpTimeoutMs.
+function fetchWithTimeout(url, opts = {}) {
+  return fetch(url, { ...opts, signal: AbortSignal.timeout(config.httpTimeoutMs) });
+}
+
 // Cache en memoire du token OAuth obtenu via client credentials grant
 // (apps creees via le Dev Dashboard Shopify depuis janvier 2026). Le token
 // expire apres ~24h; on le rafraichit un peu avant l'expiration.
@@ -10,7 +20,7 @@ let cachedToken = null; // { value, expiresAt }
 
 async function requestAccessToken() {
   const { shop, clientId, clientSecret } = config.shopify;
-  const res = await fetch(`https://${shop}/admin/oauth/access_token`, {
+  const res = await fetchWithTimeout(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -78,13 +88,17 @@ function mapOrder(order) {
 }
 
 async function requestPage(url, token) {
-  return fetch(url, {
+  return fetchWithTimeout(url, {
     headers: {
       'X-Shopify-Access-Token': token,
       'Content-Type': 'application/json',
     },
   });
 }
+
+// Garde-fou: si l'API bouclait sur le lien "next" (bug cote serveur), on
+// prefere echouer proprement plutot que paginer indefiniment.
+const MAX_PAGES = 500;
 
 async function fetchFromApi(sinceIso) {
   const { shop, apiVersion } = config.shopify;
@@ -93,8 +107,14 @@ async function fetchFromApi(sinceIso) {
 
   let url = `${baseUrl}?status=any&limit=250&created_at_min=${encodeURIComponent(sinceIso)}`;
   let token = await getAccessToken();
+  let pageCount = 0;
 
   while (url) {
+    pageCount += 1;
+    if (pageCount > MAX_PAGES) {
+      throw new Error(`Shopify API: plus de ${MAX_PAGES} pages, pagination "next" suspecte de boucler - abandon.`);
+    }
+
     let res = await requestPage(url, token);
 
     // Token expire/invalide: on rafraichit une seule fois puis on reessaie.
