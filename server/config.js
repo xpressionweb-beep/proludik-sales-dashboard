@@ -27,11 +27,13 @@ module.exports = {
     // confirme par le client comme etant l'equivalent ventes/contrats de son
     // compte IO - pas de module "sales"/"orders" separe.
     salesEndpoint: process.env.IO_SALES_ENDPOINT || '/leads',
+    // Confirmes contre un extrait reel de /leads (statusid et salesrep sont
+    // des codes/ID numeriques, affiches bruts pour l'instant - voir README).
     fieldId: process.env.IO_FIELD_ID || 'id',
-    fieldStatus: process.env.IO_FIELD_STATUS || 'status',
+    fieldStatus: process.env.IO_FIELD_STATUS || 'statusid',
     fieldAmount: process.env.IO_FIELD_AMOUNT || 'total',
-    fieldRep: process.env.IO_FIELD_REP || 'representative',
-    fieldDate: process.env.IO_FIELD_DATE || 'date',
+    fieldRep: process.env.IO_FIELD_REP || 'salesrep',
+    fieldDate: process.env.IO_FIELD_DATE || 'createtime',
     initialSyncDays: parseInt(process.env.IO_INITIAL_SYNC_DAYS, 10) || 400,
     statuses: IO_STATUSES,
     get configured() {

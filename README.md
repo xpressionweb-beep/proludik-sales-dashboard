@@ -58,16 +58,29 @@ Voir `.env.example` pour la liste complète. En résumé :
   permission "Lead Payments") qui en tient lieu. `IO_SALES_ENDPOINT` pointe
   donc par défaut vers `/leads`.
 
-  **Les noms exacts des champs (`IO_FIELD_*`) restent à valider** : ce sont
-  des défauts génériques (`status`, `total`, `representative`, `date`), pas
-  encore confirmés contre la vraie forme JSON renvoyée par `/leads` — la
-  connexion réelle n'a pas pu être testée depuis cet environnement de
-  développement (réseau restreint). Une fois testé sur Render, si le
-  dashboard affiche des montants à `0 $` ou des statuts "Inconnu"/"Autre" de
-  façon inattendue, ajuster les `IO_FIELD_*` dans `.env` pour correspondre
-  aux vrais noms de champs de la réponse `/leads` (aucun changement de code
-  requis, sauf si la structure diffère fortement — champs imbriqués au lieu
-  d'être à plat, pagination différente, etc.).
+  **Noms des champs confirmés** contre un extrait réel de `/leads` :
+  `IO_FIELD_ID=id`, `IO_FIELD_STATUS=statusid`, `IO_FIELD_AMOUNT=total`,
+  `IO_FIELD_REP=salesrep`, `IO_FIELD_DATE=createtime`.
+
+  **Statuts et représentants bruts (non mappés)** : `statusid` est un **code
+  numérique** (pas les libellés `Confirmé`/`Soumission`/`Contrat/VFR`) et
+  `salesrep` est un **ID numérique** de représentant (pas un nom). Pour
+  l'instant, le dashboard les affiche tels quels — ça veut dire concrètement
+  que :
+  - le comparatif "par statut" du dashboard regroupe toujours par les
+    libellés `Confirmé`/`Soumission`/`Contrat/VFR` (`config.io.statuses`
+    dans `server/config.js`) : tant qu'un mapping `statusid → libellé` n'est
+    pas ajouté, les vraies ventes IO tomberont dans le seau **"Autre"**
+    plutôt que d'être réparties par statut.
+  - la section "Ventes par représentant" affichera l'ID numérique brut du
+    `salesrep` au lieu d'un nom, et ne matchera donc pas les noms utilisés
+    dans `config/objectifs.json` (les objectifs resteront à `—` tant qu'un
+    mapping ID → nom n'est pas ajouté).
+
+  Ces deux mappings (statut et représentant) sont volontairement laissés
+  pour plus tard — à ajouter dans `server/connectors/inflatableOffice.js`
+  une fois la table de correspondance connue (ex. via l'admin IO ou un
+  export de la liste des statuts/représentants et leurs ID).
 
 Tant qu'un des deux connecteurs n'est pas configuré, il tourne en mode démo
 (données d'exemple) — un badge "mode démo" apparaît dans le dashboard pour
