@@ -8,11 +8,15 @@ module.exports = {
 
   shopify: {
     shop: process.env.SHOPIFY_SHOP || '',
+    // Apps "legacy" (creees avant le Dev Dashboard, jan. 2026): token statique.
     accessToken: process.env.SHOPIFY_ACCESS_TOKEN || '',
+    // Apps creees via le Dev Dashboard (depuis jan. 2026): OAuth client credentials grant.
+    clientId: process.env.SHOPIFY_CLIENT_ID || '',
+    clientSecret: process.env.SHOPIFY_CLIENT_SECRET || '',
     apiVersion: process.env.SHOPIFY_API_VERSION || '2024-10',
     initialSyncDays: parseInt(process.env.SHOPIFY_INITIAL_SYNC_DAYS, 10) || 400,
     get configured() {
-      return Boolean(this.shop && this.accessToken);
+      return Boolean(this.shop && (this.accessToken || (this.clientId && this.clientSecret)));
     },
   },
 
