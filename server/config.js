@@ -23,7 +23,11 @@ module.exports = {
   io: {
     baseUrl: process.env.IO_API_BASE_URL || '',
     apiKey: process.env.IO_API_KEY || '',
-    salesEndpoint: process.env.IO_SALES_ENDPOINT || '/api/sales',
+    // Pas de defaut: le vrai nom de l'endpoint des ventes/reservations n'a
+    // pas ete confirme (la doc publique rental.software ne couvre que le
+    // catalogue d'inventaire "/rentals"). Doit etre fourni explicitement une
+    // fois confirme avec le compte reel - voir README.
+    salesEndpoint: process.env.IO_SALES_ENDPOINT || '',
     fieldId: process.env.IO_FIELD_ID || 'id',
     fieldStatus: process.env.IO_FIELD_STATUS || 'status',
     fieldAmount: process.env.IO_FIELD_AMOUNT || 'total',
@@ -32,7 +36,7 @@ module.exports = {
     initialSyncDays: parseInt(process.env.IO_INITIAL_SYNC_DAYS, 10) || 400,
     statuses: IO_STATUSES,
     get configured() {
-      return Boolean(this.baseUrl && this.apiKey);
+      return Boolean(this.baseUrl && this.apiKey && this.salesEndpoint);
     },
   },
 

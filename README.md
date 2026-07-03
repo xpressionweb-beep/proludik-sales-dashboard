@@ -46,16 +46,32 @@ Voir `.env.example` pour la liste complète. En résumé :
     `SHOPIFY_CLIENT_SECRET`. Le token obtenu est mis en cache en mémoire et
     rafraîchi automatiquement (il expire après ~24h). Voir
     `server/connectors/shopify.js` (`getAccessToken`).
-- **InflatableOffice** : `IO_API_BASE_URL` et `IO_API_KEY`. Le connecteur
-  (`server/connectors/inflatableOffice.js`) est un adaptateur REST générique
-  écrit **sans documentation officielle de l'API IO en main** — il suppose un
-  `GET {IO_API_BASE_URL}{IO_SALES_ENDPOINT}?since=<ISO date>` avec
-  `Authorization: Bearer <IO_API_KEY>`, retournant un tableau JSON. Les noms de
-  champs (`IO_FIELD_ID`, `IO_FIELD_STATUS`, `IO_FIELD_AMOUNT`,
-  `IO_FIELD_REP`, `IO_FIELD_DATE`) sont ajustables par variable
-  d'environnement. **À valider/ajuster une fois la vraie forme de l'API IO
-  connue** — si elle diffère fortement (auth différente, pagination, etc.),
-  il faudra adapter `fetchFromApi()` dans ce fichier.
+- **InflatableOffice** (= plateforme **rental.software**, API6) :
+  `IO_API_BASE_URL` (ex: `https://rental.software/api6`) et `IO_API_KEY`.
+  D'après la documentation publique de rental.software, l'authentification se
+  fait par paramètre de requête `?apiKey=...` (pas un header
+  `Authorization: Bearer`) — c'est ce que fait
+  `server/connectors/inflatableOffice.js`. Les listes paginées suivent le
+  format `{ offset, limit, next, items: [...] }`, géré automatiquement.
+  **Point non résolu** : la doc publique ne documente que l'endpoint
+  `/rentals`, qui est le **catalogue d'inventaire** (les structures
+  gonflables), **pas les ventes/réservations**. Le vrai nom de l'endpoint des
+  ventes (`/bookings`, `/orders`, `/reservations`, ...) et les noms exacts des
+  champs (statut, montant, représentant, date) n'ont pas pu être confirmés
+  sans accès au compte réel.
+
+  **Pour finaliser `IO_SALES_ENDPOINT` et les `IO_FIELD_*`** : le plus simple
+  est de lancer une requête manuelle contre votre compte et de partager la
+  réponse JSON (avec les données clients sensibles masquées si besoin), ex. :
+  ```bash
+  curl "https://rental.software/api6/<endpoint-a-confirmer>?apiKey=VOTRE_CLE"
+  ```
+  Sinon, dans l'admin rental.software, la section "API Keys" (Settings) ou le
+  centre d'aide (support.rental.software, recherche "API") devrait lister
+  l'endpoint exact utilisé pour les réservations/ventes. Une fois confirmé,
+  ajuster `IO_SALES_ENDPOINT` et les `IO_FIELD_*` dans `.env` — aucun
+  changement de code n'est nécessaire si la forme générale (JSON, champs à
+  plat) reste similaire.
 
 Tant qu'un des deux connecteurs n'est pas configuré, il tourne en mode démo
 (données d'exemple) — un badge "mode démo" apparaît dans le dashboard pour
