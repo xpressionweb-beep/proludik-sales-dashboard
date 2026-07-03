@@ -106,15 +106,31 @@ cette source.
 ## Objectifs de vente par représentant
 
 Fichier `config/objectifs.json` : objectif annuel par représentant et par
-année financière (ex. `"2025-2026": 500000`). Le mensuel et l'hebdomadaire
+année financière (ex. `"2025-2026": 673003`). Le mensuel et l'hebdomadaire
 sont calculés automatiquement (annuel / 12 et annuel / 52). Ce fichier est
 relu à chaque requête — pas besoin de redémarrer le serveur après une
 modification.
 
 Les noms des 4 représentants (`Mathis Beaupré`, `Cedric Paré`,
 `Jerome Goulet`, `Didier Paradis`) correspondent aux vrais représentants IO
-(voir `REP_LABELS` ci-dessus), **mais les montants sont encore des valeurs
-d'exemple/placeholder** — à remplacer par les vrais objectifs annuels.
+(voir `REP_LABELS` ci-dessus). Les objectifs annuels 2025-2026 sont les
+vrais chiffres fournis par le client ; **2024-2025 reste un exemple
+placeholder** (non fourni, non utilisé par le dashboard aujourd'hui — voir
+plus bas).
+
+### Objectif boutique Shopify
+
+`config/objectifs.json` a aussi une clé `shopify` (annuel par année
+financière, ex. `"2025-2026": 200000`), **distincte des représentants** :
+les ventes Shopify ne sont pas attribuées à un représentant, donc cet
+objectif compare le **total des ventes Shopify de la période** (pas une
+somme par personne) à sa propre cible. Affiché dans le dashboard comme une
+ligne "Boutique Shopify" séparée en haut de la section "Ventes par
+représentant" (accent orange, même code couleur que "Shopify" dans le
+comparatif par statut), avec une bordure pour bien la distinguer des
+représentants individuels. Suit les mêmes onglets de période
+(semaine/mois/année) et la même logique de proratisation que les
+représentants (`getRepBreakdown` dans `server/services/aggregate.js`).
 
 ## Statuts InflatableOffice suivis
 
