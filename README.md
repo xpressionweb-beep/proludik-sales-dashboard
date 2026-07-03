@@ -77,19 +77,27 @@ Voir `.env.example` pour la liste complète. En résumé :
   Tout `statusid` absent de cette table est affiché tel quel (code brut) et
   tombe donc dans le seau **"Autre"** du dashboard — à compléter dans
   `STATUS_LABELS` au fur et à mesure que d'autres codes sont identifiés.
-  Vérifié avec un serveur fixture local reproduisant la forme réelle de
-  `/leads` (auth réelle bloquée depuis cet environnement de développement).
 
-  **Représentants non mappés** : `salesrep` est un **ID numérique**, affiché
-  tel quel pour l'instant (pas de nom). La section "Ventes par
-  représentant" ne matchera donc pas les noms utilisés dans
-  `config/objectifs.json` tant qu'un mapping ID → nom n'est pas ajouté (les
-  objectifs resteront à `—`).
+  **Mapping des représentants** (`REP_LABELS` dans
+  `server/connectors/inflatableOffice.js`) — table partielle confirmée par
+  le client :
+  | `salesrep` | Nom affiché |
+  |---|---|
+  | `80769` | Mathis Beaupré |
+  | `80773` | Cedric Paré |
+  | `81675` | Jerome Goulet |
+  | `171955` | Didier Paradis |
 
-  Ces deux mappings (statut et représentant) sont volontairement laissés
-  pour plus tard — à ajouter dans `server/connectors/inflatableOffice.js`
-  une fois la table de correspondance connue (ex. via l'admin IO ou un
-  export de la liste des statuts/représentants et leurs ID).
+  Ces noms correspondent exactement aux clés de `config/objectifs.json`
+  (vérifié : les 4 représentants ont un objectif non-`null` dans
+  `/api/reps`). Tout `salesrep` absent de cette table est affiché tel quel
+  (ID brut) — son objectif restera `null`/`—` tant qu'il n'est pas ajouté
+  aux deux fichiers (`REP_LABELS` et `config/objectifs.json`).
+
+  Les deux mappings (statut et représentant) sont vérifiés avec un serveur
+  fixture local reproduisant la forme réelle de `/leads` (auth réelle
+  bloquée depuis cet environnement de développement) — à compléter au fur
+  et à mesure que d'autres codes/ID sont identifiés.
 
 Tant qu'un des deux connecteurs n'est pas configuré, il tourne en mode démo
 (données d'exemple) — un badge "mode démo" apparaît dans le dashboard pour
@@ -102,6 +110,11 @@ année financière (ex. `"2025-2026": 500000`). Le mensuel et l'hebdomadaire
 sont calculés automatiquement (annuel / 12 et annuel / 52). Ce fichier est
 relu à chaque requête — pas besoin de redémarrer le serveur après une
 modification.
+
+Les noms des 4 représentants (`Mathis Beaupré`, `Cedric Paré`,
+`Jerome Goulet`, `Didier Paradis`) correspondent aux vrais représentants IO
+(voir `REP_LABELS` ci-dessus), **mais les montants sont encore des valeurs
+d'exemple/placeholder** — à remplacer par les vrais objectifs annuels.
 
 ## Statuts InflatableOffice suivis
 

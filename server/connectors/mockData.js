@@ -2,7 +2,10 @@
 // d'un connecteur ne sont pas configures. Permet de demarrer le serveur et de
 // voir le dashboard fonctionner avant d'avoir les vrais acces API.
 
-const SAMPLE_REPS = ['Alexandre Roy', 'Marie Tremblay', 'Jean Dupont'];
+// Alignes sur les vrais representants (REP_LABELS dans
+// inflatableOffice.js) et config/objectifs.json, pour que le mode demo
+// affiche des % vs objectifs coherents.
+const SAMPLE_REPS = ['Mathis Beaupré', 'Cedric Paré', 'Jerome Goulet', 'Didier Paradis'];
 
 // PRNG deterministe (mulberry32) pour des donnees stables entre redemarrages.
 function makeRng(seed) {
