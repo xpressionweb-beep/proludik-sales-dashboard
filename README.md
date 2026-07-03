@@ -52,7 +52,11 @@ Voir `.env.example` pour la liste complète. En résumé :
   fait par paramètre de requête `?apiKey=...` (pas un header
   `Authorization: Bearer`) — c'est ce que fait
   `server/connectors/inflatableOffice.js`. Les listes paginées suivent le
-  format `{ offset, limit, next, items: [...] }`, géré automatiquement.
+  format `{ offset, limit, next, items: [...] }`, géré automatiquement — le
+  lien `next` est construit par le serveur rental.software et ne reprend
+  pas notre `apiKey` : `withApiKey()` le réinjecte avant chaque page
+  suivante (bug corrigé qui causait un 401 "No API Key provided" dès qu'il
+  y avait plus d'une page de résultats).
   **Endpoint des ventes** : ce compte IO n'a pas de module "sales"/"orders"
   séparé — c'est le module **Leads** (contrats + paiements, confirmé via la
   permission "Lead Payments") qui en tient lieu. `IO_SALES_ENDPOINT` pointe
