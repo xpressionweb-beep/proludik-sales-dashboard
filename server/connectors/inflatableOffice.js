@@ -37,6 +37,21 @@ function mapStatus(rawStatus) {
   return label || String(rawStatus);
 }
 
+// Mapping salesrep -> nom, confirme par le client (table partielle). Doit
+// correspondre aux noms utilises dans config/objectifs.json pour que le
+// calcul des % vs objectifs fonctionne - voir README.
+const REP_LABELS = {
+  80769: 'Mathis Beaupré',
+  80773: 'Cedric Paré',
+  81675: 'Jerome Goulet',
+  171955: 'Didier Paradis',
+};
+
+// Traduit un salesrep vers son nom si connu; sinon retourne l'ID brut.
+function mapRep(rawRep) {
+  return REP_LABELS[rawRep] || String(rawRep);
+}
+
 function extractArray(json) {
   if (Array.isArray(json)) return json;
   if (Array.isArray(json.items)) return json.items;
@@ -53,7 +68,7 @@ function mapRecord(raw) {
     source: SOURCE,
     externalId: String(raw[fieldId]),
     status: raw[fieldStatus] != null ? mapStatus(raw[fieldStatus]) : 'Inconnu',
-    rep: raw[fieldRep] != null ? String(raw[fieldRep]) : null,
+    rep: raw[fieldRep] != null ? mapRep(raw[fieldRep]) : null,
     amount: parseFloat(raw[fieldAmount]) || 0,
     currency: raw.currency || 'CAD',
     orderDate: raw[fieldDate],
