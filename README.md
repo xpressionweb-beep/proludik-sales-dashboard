@@ -162,9 +162,13 @@ confirmé de leur côté (allowlist IP à ajuster).
 
 ## Mode démo InflatableOffice (présentation)
 
-Tant que `IO_API_BASE_URL`/`IO_API_KEY` ne sont pas configurés, le mode
-démo IO génère des **chiffres précis** pour l'année financière en cours
-(pas des montants aléatoires), pour une présentation :
+Tant que `IO_API_BASE_URL`/`IO_API_KEY` ne sont pas configurés — **ou que
+`IO_FORCE_DEMO=true`** (force le mode démo même si de vraies clés
+fonctionnelles sont présentes, ex. sur Render pendant un blocage IP côté
+IO — voir "Diagnostic : IP sortante du serveur" — pratique pour
+activer/désactiver une présentation sans toucher aux vraies clés) — le
+mode démo IO génère des **chiffres précis** pour l'année financière en
+cours (pas des montants aléatoires), pour une présentation :
 
 | Représentant | Confirmés | Soumissions | VRF/Contrats |
 |---|---|---|---|
@@ -187,14 +191,20 @@ toujours l'ancien générateur aléatoire générique.
 pour que ce soit toujours visuellement évident que les données affichées
 ne sont pas 100% réelles.
 
-**Pour désactiver** ces chiffres de présentation et revenir à l'ancien
-mock générique (aléatoire) : dans `server/connectors/inflatableOffice.js`
+**Pour arrêter la présentation** (repasser à la vraie sync IO) :
+- Si `IO_FORCE_DEMO=true` est réglé sur Render : repassez-le à `false` (ou
+  retirez la variable) et redéployez — pas besoin de toucher aux vraies
+  clés. C'est l'usage prévu (activer/désactiver la présentation sans
+  jamais modifier `IO_API_BASE_URL`/`IO_API_KEY`).
+- Sans `IO_FORCE_DEMO`, dès que `IO_API_BASE_URL`/`IO_API_KEY` sont
+  configurés avec de vrais identifiants qui fonctionnent, le mode démo (et
+  donc ces chiffres) ne s'active plus du tout automatiquement.
+
+Pour revenir à l'ancien mock générique (aléatoire) plutôt qu'aux chiffres
+de présentation : dans `server/connectors/inflatableOffice.js`
 (`fetchSales`), retirer l'appel à `generateIoPresentationSales()` et
 repasser `generateMockSales()` sur toute la période comme avant (voir
-l'historique git de ce fichier). Une fois `IO_API_BASE_URL`/`IO_API_KEY`
-configurés avec de vrais identifiants qui fonctionnent, le mode démo (et
-donc ces chiffres) ne s'active plus du tout — c'est la vraie sortie
-"définitive" de ce mode.
+l'historique git de ce fichier).
 
 ## Objectifs de vente par représentant
 

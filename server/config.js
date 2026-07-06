@@ -46,7 +46,12 @@ module.exports = {
     fieldDate: process.env.IO_FIELD_DATE || 'createtime',
     initialSyncDays: parseInt(process.env.IO_INITIAL_SYNC_DAYS, 10) || 400,
     statuses: IO_STATUSES,
+    // Force le mode demo (chiffres de presentation) meme si de vraies cles
+    // sont configurees - pratique pour activer/desactiver une presentation
+    // sans toucher aux vraies cles (ex: pendant un blocage IP cote IO).
+    forceDemo: process.env.IO_FORCE_DEMO === 'true',
     get configured() {
+      if (this.forceDemo) return false;
       return Boolean(this.baseUrl && this.apiKey && this.salesEndpoint);
     },
   },
