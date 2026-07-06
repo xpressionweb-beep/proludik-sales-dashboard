@@ -2,14 +2,18 @@ const cron = require('node-cron');
 const config = require('./config');
 const { syncAll } = require('./services/sync');
 
-let running = false;
+// File d'attente (chainage de promesses): chaque appel a runSync() est
+// serialise, jamais ignore silencieusement. Si une sync est deja en cours
+// (ex: bloquee a attendre le timeout IO), le nouvel appel est mis en
+// attente et se declenche automatiquement des que la precedente se
+// termine - au lieu de disparaitre avec "deja en cours" comme avant.
+// `busy` ne sert qu'a l'affichage; la serialisation reelle vient du
+// chainage de `queue`.
+let busy = false;
+let queue = Promise.resolve();
 
-async function runSync(trigger) {
-  if (running) {
-    console.log(`[sync] deja en cours, saut du declenchement (${trigger})`);
-    return;
-  }
-  running = true;
+async function doSync(trigger) {
+  busy = true;
   console.log(`[sync] demarrage (${trigger})`);
   try {
     const results = await syncAll();
@@ -20,9 +24,27 @@ async function runSync(trigger) {
         console.error(`[sync] ${r.source}: echec - ${r.error}`);
       }
     }
+    return results;
   } finally {
-    running = false;
+    busy = false;
   }
+}
+
+function runSync(trigger) {
+  if (busy) {
+    console.log(`[sync] "${trigger}" mis en file d'attente (une sync est deja en cours) - se declenchera automatiquement a la suite.`);
+  }
+
+  const scheduled = queue.then(
+    () => doSync(trigger),
+    () => doSync(trigger) // la sync precedente a echoue: on demarre quand meme celle-ci
+  );
+  // Ne jamais laisser une rejection casser le chainage pour les appels suivants;
+  // l'appelant de runSync() recoit lui, sans transformation, `scheduled` (qui peut
+  // toujours rejeter/etre inspecte normalement).
+  queue = scheduled.catch(() => {});
+
+  return scheduled;
 }
 
 function start() {

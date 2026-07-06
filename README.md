@@ -211,6 +211,23 @@ clic déclenche aussi une resynchronisation immédiate (pas besoin d'attendre
 le prochain cycle cron de 30 minutes). Endpoints : `GET /api/settings/io-mode`
 (état actuel) et `POST /api/settings/io-mode` (`{ "mode": "demo" | "real" }`).
 
+**Si une synchronisation précédente est bloquée** (ex: attend le timeout
+d'une API IO injoignable, jusqu'à `SYNC_WATCHDOG_MS`) au moment du clic,
+la nouvelle demande **n'est jamais ignorée** : elle est mise en file
+d'attente (`server/scheduler.js`, chaînage de promesses — jamais de "déjà
+en cours, on saute" silencieux) et se déclenche automatiquement dès que la
+sync bloquée se termine. La requête HTTP elle-même n'attend pas plus de
+4 secondes (`QUICK_SYNC_MS` dans `server/routes/api.js`) : au-delà, elle
+répond immédiatement avec `queued: true` (le changement de mode est déjà
+appliqué, mais les données affichées ne seront à jour qu'une fois la sync
+en attente terminée) plutôt que de faire pendre le navigateur. Le
+dashboard affiche alors un message temporaire dans le pied de page pour
+prévenir que ce n'est pas encore appliqué aux données. Interruption
+immédiate de la sync bloquée (plutôt que mise en file d'attente) a été
+envisagée mais écartée pour l'instant — nécessiterait de faire circuler un
+`AbortController` dans tous les connecteurs, plus risqué pour un gain
+limité (l'attente est de toute façon bornée par `SYNC_WATCHDOG_MS`).
+
 Si vous demandez le mode "Réel" mais qu'aucune vraie clé IO fonctionnelle
 n'est configurée, le serveur reste honnêtement en "Démo" (impossible de
 faire une vraie sync sans vraies clés) — le bouton et le badge reflètent

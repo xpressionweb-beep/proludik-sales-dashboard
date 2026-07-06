@@ -355,6 +355,7 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
   cursor: pointer; padding: 0;
 }
 .link-btn:disabled { opacity: 0.5; cursor: default; }
+.queued-notice { color: var(--warning); font-weight: 700; }
 
 .muted { color: var(--text-secondary); }
 .small { font-size: 12px; }
