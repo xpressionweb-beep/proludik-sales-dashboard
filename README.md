@@ -326,6 +326,39 @@ au total réel de vente de l'année financière en cours
   (% de l'objectif annuel proratisé). Choix délibéré pour ne pas inventer
   une deuxième métrique sans définition — voir section suivante.
 
+## Compteurs Confirmés / Soumissions / VRF-Contrats / Conversion moyenne
+
+Les 4 cartes sous les grandes cartes (`/api/status-counts-7d` et
+`/api/rep-conversion-summary`) :
+
+- **Confirmés / Soumissions / VRF/Contrats** : comptes sur une **fenêtre
+  glissante de 7 jours** (les 7 derniers jours, aujourd'hui inclus — PAS
+  la semaine calendaire ISO utilisée ailleurs), comparés aux 7 jours
+  précédents. `getBounds('rolling7', offset)` dans
+  `server/services/aggregate.js`, distinct du type `'week'` (ancré au
+  lundi).
+- **Limite connue** : on ne trace pas l'historique des changements de
+  statut — chaque vente IO n'a qu'une seule date (`orderDate`, mappée
+  depuis le champ IO `createtime`, la date de création du lead) et un seul
+  statut actuel (le dernier connu, mis à jour à chaque sync par upsert).
+  "Confirmés passés au statut Confirmé dans les 7 derniers jours" est donc
+  approximé par *statut = Confirmé ET créé dans les 7 derniers jours* —
+  la meilleure approximation possible sans historique de statuts détaillé
+  côté IO.
+- **"Soumissions actuellement ouvertes"** ne nécessite **aucune logique
+  de filtrage supplémentaire** pour exclure celles converties depuis :
+  chaque sync écrase le statut d'un enregistrement par son statut ACTUEL
+  (upsert par `externalId`) — si une soumission a été convertie en
+  Confirmé/Contrat-VFR depuis sa création, son statut stocké est déjà
+  passé à ce nouveau statut. Filtrer par `statut = Soumission` suffit donc
+  à ne garder que celles encore ouvertes.
+- **Conversion moyenne** : moyenne arithmétique simple (pas pondérée par
+  volume) des taux de conversion individuels des **4 représentants IO
+  connus** (`config/objectifs.json`), sur l'année financière en cours —
+  même définition et mêmes chiffres que la colonne "Conversion" du
+  tableau des représentants. Exclut la "Boutique Shopify" (pas de
+  représentant) et tout ID de représentant non mappé.
+
 ## Comparaisons "année précédente" (grandes cartes)
 
 Les 4 grandes cartes comparent **la même période l'an dernier**, pas la
@@ -473,6 +506,10 @@ config/
   proratisé, %) + ligne `shopify` distincte.
 - `GET /api/objective` — objectif annuel global vs total réel de l'année
   financière en cours.
+- `GET /api/status-counts-7d` — comptes Confirmés/Soumissions/VRF-Contrats
+  sur 7 jours glissants vs les 7 jours précédents.
+- `GET /api/rep-conversion-summary` — taux de conversion moyen des 4
+  représentants IO connus.
 - `GET /api/trend?card=week|month|year` — série de points réels pour la
   sparkline de la carte correspondante.
 - `GET /api/activity?limit=8` — les N ventes réelles les plus récentes.

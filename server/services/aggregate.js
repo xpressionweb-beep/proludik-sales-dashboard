@@ -38,6 +38,21 @@ function getBounds(type, offset, referenceDate = new Date()) {
     };
   }
 
+  if (type === 'rolling7') {
+    // Fenetre glissante de 7 jours se terminant aujourd'hui inclus (PAS la
+    // semaine calendaire ISO utilisee par le type "week" ci-dessous).
+    // offset=-1 donne les 7 jours immediatement precedents (pour "vs 7
+    // jours precedents"), pas les 7 jours de la semaine civile precedente.
+    const todayStart = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+    const end = addDays(todayStart, 1 + 7 * offset);
+    const start = addDays(end, -7);
+    return {
+      start,
+      end,
+      label: `${start.toLocaleDateString('fr-CA')} → ${addDays(end, -1).toLocaleDateString('fr-CA')}`,
+    };
+  }
+
   if (type === 'week') {
     const day = ref.getDay(); // 0=dim..6=sam
     const diffToMonday = (day + 6) % 7;
@@ -276,6 +291,61 @@ function getTrend(cardType, referenceDate = new Date()) {
   return points;
 }
 
+// Compteurs par statut IO sur une fenetre glissante de 7 jours (vs les 7
+// jours precedents), pour les 3 cartes Confirmes/Soumissions/VRF-Contrats
+// sous les grandes cartes.
+//
+// Limite connue: on ne trace pas l'historique des changements de statut -
+// chaque enregistrement n'a qu'une seule date (`orderDate`, mappee depuis
+// le champ IO "createtime") et un seul statut actuel (le dernier connu, mis
+// a jour a chaque sync). Donc:
+// - "Confirmes passes au statut Confirme dans les 7 derniers jours" est
+//   approxime par "statut = Confirme ET createtime dans les 7 derniers
+//   jours" - createtime est la date de creation du lead chez IO, pas
+//   necessairement la date exacte du changement de statut. Meilleure
+//   approximation possible sans historique de statuts.
+// - "Soumissions actuellement ouvertes créées dans les 7 derniers jours"
+//   n'a PAS besoin de logique supplementaire pour exclure les soumissions
+//   converties: chaque sync ecrase le statut d'un enregistrement par son
+//   statut ACTUEL (upsert par externalId) - si une soumission a ete
+//   convertie en Confirme/Contrat-VFR depuis, son statut stocke est deja
+//   passe a ce nouveau statut. Filtrer par statut = Soumission suffit donc
+//   a ne garder que celles encore ouvertes.
+function getStatusCounts7d(referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const cur = getBounds('rolling7', 0, referenceDate);
+  const prev = getBounds('rolling7', -1, referenceDate);
+
+  const countFor = (status, { start, end }) =>
+    sales.filter((s) => s.source === 'io' && s.status === status && inRange(s.orderDate, start, end)).length;
+
+  const statuses = {};
+  for (const status of config.io.statuses) {
+    const current = countFor(status, cur);
+    const previous = countFor(status, prev);
+    statuses[status] = { current, previous, changePct: pctChange(current, previous) };
+  }
+
+  return { current: { label: cur.label }, previous: { label: prev.label }, statuses };
+}
+
+// Taux de conversion moyen parmi les representants IO connus (config/
+// objectifs.json) - PAS la boutique Shopify, qui n'a pas de representant.
+// Simple moyenne arithmetique des taux individuels (pas ponderee par
+// volume), meme definition de "conversion" que le tableau des
+// representants (part des ventes Confirme dans le total du representant),
+// sur l'annee financiere en cours - memes chiffres que le tableau.
+function getRepConversionSummary(referenceDate = new Date()) {
+  const objectifs = loadObjectifs();
+  const knownReps = Object.keys(objectifs.reps || {});
+  const { reps, fiscalYear, label } = getRepBreakdown('year', 0, referenceDate);
+
+  const matched = reps.filter((r) => knownReps.includes(r.rep) && r.conversion !== null);
+  const average = matched.length ? matched.reduce((s, r) => s + r.conversion, 0) / matched.length : null;
+
+  return { average, repCount: matched.length, fiscalYear, label };
+}
+
 // Flux "activite en direct": les N ventes reelles les plus recentes (tous
 // statuts/sources confondus), triees par date de vente. Pas d'evenements
 // fabriques - juste une vue recente des vraies donnees synchronisees.
@@ -299,6 +369,8 @@ module.exports = {
   getOverview,
   getYoY,
   getRepBreakdown,
+  getStatusCounts7d,
+  getRepConversionSummary,
   getGlobalObjective,
   getTrend,
   getRecentActivity,
