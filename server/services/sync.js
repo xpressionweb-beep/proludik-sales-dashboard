@@ -4,8 +4,18 @@ const shopify = require('../connectors/shopify');
 const inflatableOffice = require('../connectors/inflatableOffice');
 
 const CONNECTORS = [
-  { source: shopify.SOURCE, fetchSales: shopify.fetchSales, initialSyncDays: config.shopify.initialSyncDays },
-  { source: inflatableOffice.SOURCE, fetchSales: inflatableOffice.fetchSales, initialSyncDays: config.io.initialSyncDays },
+  {
+    source: shopify.SOURCE,
+    fetchSales: shopify.fetchSales,
+    initialSyncDays: config.shopify.initialSyncDays,
+    isMock: () => !config.shopify.configured,
+  },
+  {
+    source: inflatableOffice.SOURCE,
+    fetchSales: inflatableOffice.fetchSales,
+    initialSyncDays: config.io.initialSyncDays,
+    isMock: () => !config.io.configured,
+  },
 ];
 
 function sinceIsoFor(source, initialSyncDays) {
@@ -32,12 +42,16 @@ function withWatchdog(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-async function syncSource({ source, fetchSales, initialSyncDays }) {
+async function syncSource({ source, fetchSales, initialSyncDays, isMock }) {
   const sinceIso = sinceIsoFor(source, initialSyncDays);
   const startedAt = new Date().toISOString();
   try {
     const records = await withWatchdog(fetchSales({ sinceIso }), config.syncWatchdogMs, `sync ${source}`);
-    const result = db.upsertSales(records);
+    // En mode mock, le generateur renvoie a chaque fois son jeu de donnees
+    // complet: on remplace plutot que d'upserter, pour ne jamais laisser
+    // trainer d'anciens enregistrements (real ou mock) qui fausseraient les
+    // agregats (voir server/db.js:replaceSourceSales).
+    const result = isMock && isMock() ? db.replaceSourceSales(source, records) : db.upsertSales(records);
     db.setSourceMeta(source, {
       lastSuccessAt: startedAt,
       lastError: null,

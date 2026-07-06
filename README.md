@@ -275,12 +275,16 @@ de présentation : dans `server/connectors/inflatableOffice.js`
 repasser `generateMockSales()` sur toute la période comme avant (voir
 l'historique git de ce fichier).
 
-**Limite connue** : basculer entre Réel et Démo (ou redémarrer avec des
-clés différentes) n'efface pas les enregistrements déjà synchronisés dans
-`data/sales.json` — les deux jeux de données s'additionnent (upsert) tant
-que le fichier n'est pas vidé manuellement. Sans incidence sur une
-présentation propre partant d'un fichier vide, mais peut mélanger de
-vieilles données de test si vous alternez souvent les deux modes en local.
+Basculer entre Réel et Démo ne mélange pas les données : à chaque sync,
+si la source (`shopify` ou `io`) est détectée en mode mock, ses
+enregistrements sont entièrement remplacés (pas d'upsert) par le lot
+généré — voir `db.replaceSourceSales()` et `services/sync.js`. Les
+éventuels enregistrements laissés par une tentative réelle précédente (ou
+par une ancienne génération de données de démo) sont donc purgés
+automatiquement dès la prochaine sync en mode mock, sans intervention
+manuelle. Seul le mode Réel continue d'utiliser un upsert incrémental
+(`sinceIso`), pour ne jamais perdre l'historique des ventes déjà
+récupérées.
 
 ## Objectifs de vente par représentant
 
