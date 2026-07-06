@@ -160,6 +160,42 @@ Render). Pour vérifier/fournir cette IP :
 Cette IP est celle à fournir au support rental.software si le blocage est
 confirmé de leur côté (allowlist IP à ajuster).
 
+## Mode démo InflatableOffice (présentation)
+
+Tant que `IO_API_BASE_URL`/`IO_API_KEY` ne sont pas configurés, le mode
+démo IO génère des **chiffres précis** pour l'année financière en cours
+(pas des montants aléatoires), pour une présentation :
+
+| Représentant | Confirmés | Soumissions | VRF/Contrats |
+|---|---|---|---|
+| Cedric Paré | 680 000 $ | 350 000 $ | 150 450 $ |
+| Mathis Beaupré | 300 000 $ | 175 600 $ | 50 000 $ |
+| Didier Paradis | 320 000 $ | 180 200 $ | 53 000 $ |
+| Jerome Goulet | 110 000 $ | 60 054 $ | 23 000 $ |
+
+(Total IO : 2 452 304 $ pour l'année financière en cours — voir
+`PRESENTATION_TARGETS` dans `server/connectors/mockData.js`.) Ces montants
+sont répartis sur plusieurs "ventes" individuelles réalistes entre le
+début de l'année financière et aujourd'hui
+(`generateIoPresentationSales()`), pour que les sparklines et l'activité
+récente aient l'air normales. Les périodes **avant** le début de l'année
+financière (utilisées pour les comparatifs "vs l'an dernier") utilisent
+toujours l'ancien générateur aléatoire générique.
+
+**Le badge "Activité récente" bascule automatiquement en "Mode démo"**
+(couleur ambre) dès qu'une source (Shopify ou IO) tourne en mode démo —
+pour que ce soit toujours visuellement évident que les données affichées
+ne sont pas 100% réelles.
+
+**Pour désactiver** ces chiffres de présentation et revenir à l'ancien
+mock générique (aléatoire) : dans `server/connectors/inflatableOffice.js`
+(`fetchSales`), retirer l'appel à `generateIoPresentationSales()` et
+repasser `generateMockSales()` sur toute la période comme avant (voir
+l'historique git de ce fichier). Une fois `IO_API_BASE_URL`/`IO_API_KEY`
+configurés avec de vrais identifiants qui fonctionnent, le mode démo (et
+donc ces chiffres) ne s'active plus du tout — c'est la vraie sortie
+"définitive" de ce mode.
+
 ## Objectifs de vente par représentant
 
 Fichier `config/objectifs.json` : objectif annuel par représentant et par

@@ -343,6 +343,15 @@ async function renderMeta() {
   document.getElementById('lastUpdate').textContent = latest
     ? `Données mises à jour à ${latest.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}`
     : 'Aucune synchronisation encore';
+
+  // Badge "Activité récente": bascule en "Mode démo" (couleur distincte)
+  // des qu'une source (Shopify ou IO) tourne en mode démo, pour qu'il soit
+  // toujours visuellement évident que les données affichées ne sont pas
+  // 100% réelles.
+  const anyMock = meta.mock.shopify || meta.mock.io;
+  const badge = document.getElementById('activityBadge');
+  badge.classList.toggle('is-mock', anyMock);
+  badge.innerHTML = `<span class="dot"></span>${anyMock ? 'Mode démo' : 'Données réelles'}`;
 }
 
 // ---------- Annee financiere (haut a droite) ----------
