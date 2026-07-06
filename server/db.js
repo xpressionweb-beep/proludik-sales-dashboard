@@ -56,6 +56,21 @@ function upsertSales(records) {
   return { inserted, updated, total: sales.length };
 }
 
+// Remplace entierement les enregistrements d'une source par un nouveau lot.
+// Utilise pour les sources en mode mock: le generateur produit a chaque
+// sync son jeu de donnees complet, donc un replace evite l'accumulation de
+// vieux enregistrements (ex: restes d'une tentative reelle precedente, ou
+// d'une ancienne "generation" de donnees de demo) qui resteraient melanges
+// indefiniment via upsert (voir README, section "Limite connue").
+function replaceSourceSales(source, records) {
+  const sales = getAllSales().filter((s) => s.source !== source);
+  const before = sales.length;
+  sales.push(...records);
+
+  writeJsonAtomic(SALES_FILE, sales);
+  return { inserted: sales.length - before, updated: 0, total: sales.length };
+}
+
 // --- Sync meta (last fetch status per source) ---
 
 function getMeta() {
@@ -73,6 +88,7 @@ function setSourceMeta(source, patch) {
 module.exports = {
   getAllSales,
   upsertSales,
+  replaceSourceSales,
   getMeta,
   setSourceMeta,
 };
