@@ -1,4 +1,5 @@
 require('dotenv').config();
+const runtimeSettings = require('./runtimeSettings');
 
 const IO_STATUSES = ['Confirmé', 'Soumission', 'Contrat/VFR'];
 
@@ -49,9 +50,14 @@ module.exports = {
     // Force le mode demo (chiffres de presentation) meme si de vraies cles
     // sont configurees - pratique pour activer/desactiver une presentation
     // sans toucher aux vraies cles (ex: pendant un blocage IP cote IO).
+    // Valeur de secours au demarrage; le bouton "Réel/Démo" du dashboard
+    // (via runtimeSettings, /api/settings/io-mode) prend le pas dessus une
+    // fois utilise, sans avoir a changer de variable d'environnement.
     forceDemo: process.env.IO_FORCE_DEMO === 'true',
     get configured() {
-      if (this.forceDemo) return false;
+      const override = runtimeSettings.getIoModeOverride();
+      const forceDemo = override ? override === 'demo' : this.forceDemo;
+      if (forceDemo) return false;
       return Boolean(this.baseUrl && this.apiKey && this.salesEndpoint);
     },
   },

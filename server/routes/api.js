@@ -4,6 +4,7 @@ const db = require('../db');
 const aggregate = require('../services/aggregate');
 const { runSync } = require('../scheduler');
 const { getOutboundIp } = require('../diagnostics');
+const runtimeSettings = require('../runtimeSettings');
 
 const router = express.Router();
 
@@ -62,6 +63,28 @@ router.get('/diagnostics/ip', async (req, res) => {
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
+});
+
+// Bouton "Réel/Démo" du dashboard: bascule la source de donnees IO au
+// runtime, sans changer de variable d'environnement ni redeployer. L'etat
+// effectif (mode) reflete deja tout override actif ou, a defaut,
+// IO_FORCE_DEMO - voir config.js (io.configured).
+router.get('/settings/io-mode', (req, res) => {
+  res.json({ mode: config.io.configured ? 'real' : 'demo' });
+});
+
+router.post('/settings/io-mode', async (req, res) => {
+  const { mode } = req.body || {};
+  if (mode !== 'demo' && mode !== 'real') {
+    return res.status(400).json({ error: 'mode doit etre "demo" ou "real".' });
+  }
+
+  runtimeSettings.setIoModeOverride(mode);
+  // Resynchronise tout de suite pour que le changement soit visible sans
+  // attendre le prochain cycle cron.
+  await runSync('io-mode-change');
+
+  res.json({ mode: config.io.configured ? 'real' : 'demo', meta: db.getMeta() });
 });
 
 module.exports = router;
