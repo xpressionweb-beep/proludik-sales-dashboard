@@ -152,7 +152,11 @@ async function fetchFromApi(sinceIso) {
 
 async function fetchSales({ sinceIso }) {
   if (!config.io.configured) {
-    console.warn('[io] IO_API_BASE_URL / IO_API_KEY non configures - mode MOCK actif (donnees de presentation).');
+    console.warn(
+      config.io.forceDemo
+        ? '[io] IO_FORCE_DEMO=true - mode MOCK force (donnees de presentation), vraies cles ignorees.'
+        : '[io] IO_API_BASE_URL / IO_API_KEY non configures - mode MOCK actif (donnees de presentation).'
+    );
 
     // Donnees de presentation (chiffres precis demandes par le client) pour
     // l'annee financiere en cours - voir README "Mode démo InflatableOffice

@@ -344,14 +344,15 @@ async function renderMeta() {
     ? `Données mises à jour à ${latest.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}`
     : 'Aucune synchronisation encore';
 
-  // Badge "Activité récente": bascule en "Mode démo" (couleur distincte)
-  // des qu'une source (Shopify ou IO) tourne en mode démo, pour qu'il soit
-  // toujours visuellement évident que les données affichées ne sont pas
-  // 100% réelles.
-  const anyMock = meta.mock.shopify || meta.mock.io;
+  // Badge "Activité récente": reflete specifiquement le mode IO (bouton
+  // Réel/Démo du header), pas un "OU" avec Shopify - sinon le badge
+  // resterait bloque sur "Mode démo" tant que Shopify n'a pas de vraies
+  // cles, meme quand on bascule IO sur "Réel" (le statut de Shopify reste
+  // visible separement dans le pied de page, ci-dessus).
+  const isIoMock = meta.mock.io;
   const badge = document.getElementById('activityBadge');
-  badge.classList.toggle('is-mock', anyMock);
-  badge.innerHTML = `<span class="dot"></span>${anyMock ? 'Mode démo' : 'Données réelles'}`;
+  badge.classList.toggle('is-mock', isIoMock);
+  badge.innerHTML = `<span class="dot"></span>${isIoMock ? 'Mode démo' : 'Données réelles'}`;
 }
 
 // ---------- Annee financiere (haut a droite) ----------
@@ -359,6 +360,41 @@ async function renderFiscalRange() {
   const objective = await fetchJson('/api/objective');
   const [y1, y2] = objective.fiscalYear.split('-');
   document.getElementById('fiscalRange').textContent = `1 OCT. ${y1} - 30 SEPT. ${y2}`;
+}
+
+// ---------- Bouton Réel/Démo (donnees IO) ----------
+// Contrairement au theme, ceci change un vrai comportement serveur (quelle
+// source de donnees IO utiliser) - l'etat vit cote serveur
+// (server/runtimeSettings.js, persiste sur disque), pas juste dans le
+// navigateur. localStorage n'est utilise nulle part ici.
+function renderIoModeButton(mode) {
+  const btn = document.getElementById('ioModeToggle');
+  btn.classList.toggle('is-demo', mode === 'demo');
+  document.getElementById('ioModeText').textContent = mode === 'demo' ? 'Démo' : 'Réel';
+  btn.disabled = false;
+}
+
+async function initIoModeToggle() {
+  const btn = document.getElementById('ioModeToggle');
+  const { mode } = await fetchJson('/api/settings/io-mode');
+  renderIoModeButton(mode);
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const nextMode = btn.classList.contains('is-demo') ? 'real' : 'demo';
+    try {
+      const result = await fetchJson('/api/settings/io-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: nextMode }),
+      });
+      renderIoModeButton(result.mode);
+      await loadAll();
+    } catch (err) {
+      console.error(err);
+      btn.disabled = false;
+    }
+  });
 }
 
 async function loadAll() {
@@ -388,6 +424,7 @@ renderStaticIcons();
 initTheme();
 updateClock();
 setInterval(updateClock, 1000);
+initIoModeToggle().catch((err) => console.error('Impossible de charger le mode IO (Réel/Démo):', err));
 
 loadAll().catch((err) => {
   console.error(err);

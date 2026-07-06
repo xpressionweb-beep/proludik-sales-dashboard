@@ -162,9 +162,13 @@ confirmé de leur côté (allowlist IP à ajuster).
 
 ## Mode démo InflatableOffice (présentation)
 
-Tant que `IO_API_BASE_URL`/`IO_API_KEY` ne sont pas configurés, le mode
-démo IO génère des **chiffres précis** pour l'année financière en cours
-(pas des montants aléatoires), pour une présentation :
+Tant que `IO_API_BASE_URL`/`IO_API_KEY` ne sont pas configurés — **ou que
+`IO_FORCE_DEMO=true`** (force le mode démo même si de vraies clés
+fonctionnelles sont présentes, ex. sur Render pendant un blocage IP côté
+IO — voir "Diagnostic : IP sortante du serveur" — pratique pour
+activer/désactiver une présentation sans toucher aux vraies clés) — le
+mode démo IO génère des **chiffres précis** pour l'année financière en
+cours (pas des montants aléatoires), pour une présentation :
 
 | Représentant | Confirmés | Soumissions | VRF/Contrats |
 |---|---|---|---|
@@ -183,18 +187,51 @@ financière (utilisées pour les comparatifs "vs l'an dernier") utilisent
 toujours l'ancien générateur aléatoire générique.
 
 **Le badge "Activité récente" bascule automatiquement en "Mode démo"**
-(couleur ambre) dès qu'une source (Shopify ou IO) tourne en mode démo —
-pour que ce soit toujours visuellement évident que les données affichées
-ne sont pas 100% réelles.
+(couleur ambre) dès que la source IO tourne en mode démo — pour que ce
+soit toujours visuellement évident que les données affichées ne sont pas
+100% réelles. (Il suit spécifiquement l'état IO, pas Shopify — le statut
+de Shopify reste visible séparément dans le pied de page du dashboard.)
 
-**Pour désactiver** ces chiffres de présentation et revenir à l'ancien
-mock générique (aléatoire) : dans `server/connectors/inflatableOffice.js`
+### Bouton "Réel / Démo" (recommandé)
+
+Un bouton dans le header (à côté du bouton clair/sombre) bascule entre les
+deux modes **sans redéployer ni toucher aux variables d'environnement**.
+Contrairement au thème (purement visuel, mémorisé côté navigateur), ce
+bouton change un vrai comportement serveur :
+
+- **Réel** : le connecteur IO utilise `IO_API_BASE_URL`/`IO_API_KEY`
+  comme d'habitude.
+- **Démo** : force les chiffres de présentation ci-dessus, peu importe si
+  de vraies clés sont configurées.
+
+L'état est géré côté serveur (`server/runtimeSettings.js`), persisté dans
+`data/settings.json` (survit à un redémarrage du serveur), et **prend le
+pas sur `IO_FORCE_DEMO`** dès qu'il a été utilisé une première fois. Un
+clic déclenche aussi une resynchronisation immédiate (pas besoin d'attendre
+le prochain cycle cron de 30 minutes). Endpoints : `GET /api/settings/io-mode`
+(état actuel) et `POST /api/settings/io-mode` (`{ "mode": "demo" | "real" }`).
+
+Si vous demandez le mode "Réel" mais qu'aucune vraie clé IO fonctionnelle
+n'est configurée, le serveur reste honnêtement en "Démo" (impossible de
+faire une vraie sync sans vraies clés) — le bouton et le badge reflètent
+alors l'état réel, pas ce qui a été demandé.
+
+`IO_FORCE_DEMO` (variable d'environnement, voir plus haut) reste utile
+comme **valeur de démarrage par défaut** avant toute utilisation du
+bouton, ou pour un contrôle par déploiement (ex. CI/CD) plutôt que manuel.
+
+Pour revenir à l'ancien mock générique (aléatoire) plutôt qu'aux chiffres
+de présentation : dans `server/connectors/inflatableOffice.js`
 (`fetchSales`), retirer l'appel à `generateIoPresentationSales()` et
 repasser `generateMockSales()` sur toute la période comme avant (voir
-l'historique git de ce fichier). Une fois `IO_API_BASE_URL`/`IO_API_KEY`
-configurés avec de vrais identifiants qui fonctionnent, le mode démo (et
-donc ces chiffres) ne s'active plus du tout — c'est la vraie sortie
-"définitive" de ce mode.
+l'historique git de ce fichier).
+
+**Limite connue** : basculer entre Réel et Démo (ou redémarrer avec des
+clés différentes) n'efface pas les enregistrements déjà synchronisés dans
+`data/sales.json` — les deux jeux de données s'additionnent (upsert) tant
+que le fichier n'est pas vidé manuellement. Sans incidence sur une
+présentation propre partant d'un fichier vide, mais peut mélanger de
+vieilles données de test si vous alternez souvent les deux modes en local.
 
 ## Objectifs de vente par représentant
 
@@ -318,6 +355,7 @@ server/
   db.js                stockage JSON (data/sales.json, data/meta.json)
   scheduler.js         cron (toutes les 30 min) + sync au démarrage
   diagnostics.js       IP sortante du serveur (voir section dédiée)
+  runtimeSettings.js   override runtime du mode IO (data/settings.json)
   connectors/
     shopify.js          connecteur Shopify Admin API
     inflatableOffice.js  connecteur IO (générique, à ajuster selon la vraie API)
@@ -353,3 +391,8 @@ config/
 - `POST /api/sync` — déclenche une synchronisation manuelle immédiate.
 - `GET /api/diagnostics/ip` — IP sortante du serveur (voir section
   "Diagnostic : IP sortante du serveur").
+- `GET /api/settings/io-mode` — mode IO effectif actuel (`{ "mode":
+  "demo" | "real" }`).
+- `POST /api/settings/io-mode` (`{ "mode": "demo" | "real" }`) — bascule
+  le mode IO au runtime et resynchronise immédiatement (voir "Bouton
+  Réel / Démo").
