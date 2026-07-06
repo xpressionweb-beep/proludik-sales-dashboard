@@ -343,6 +343,45 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 
 .alerts-placeholder { margin: 0; line-height: 1.5; }
 
+/* ---------- Reseaux sociaux ---------- */
+
+.social-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.social-card {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-card-header { display: flex; align-items: center; gap: 10px; }
+.social-icon {
+  width: 32px; height: 32px; border-radius: 50%; flex: none;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.social-icon svg { width: 17px; height: 17px; }
+.social-icon.facebook { background: #1877f2; }
+.social-icon.instagram { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%); }
+.social-name { font-weight: 700; font-size: 14px; flex: 1; }
+
+.social-followers { font-size: 26px; font-weight: 800; }
+.social-followers-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-left: 6px; }
+
+.social-metrics-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; gap: 10px;
+  padding-top: 4px; border-top: 1px solid var(--border);
+}
+.social-metric { display: flex; flex-direction: column; gap: 2px; }
+.social-metric-value { font-weight: 700; color: var(--text-primary); font-size: 13px; }
+
 /* ---------- Footer ---------- */
 
 .page-footer {

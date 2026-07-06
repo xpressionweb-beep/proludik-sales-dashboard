@@ -24,10 +24,15 @@ consulter.
   - Tableau "Performance des représentants" (par statut, conversion,
     objectif, progression, score) + ligne "Boutique Shopify" distincte.
   - Panneau "Activité récente" — dernières ventes réelles synchronisées.
+  - Section "Réseaux sociaux" (Facebook / Instagram) — abonnés, croissance,
+    engagement (voir section dédiée plus bas).
   - Année financière = **1er octobre → 30 septembre**.
-- **Mode démo (mock)** : si les identifiants Shopify ou InflatableOffice ne
-  sont pas configurés, le connecteur correspondant génère des données
-  d'exemple, pour pouvoir tester le serveur et le dashboard immédiatement.
+- **Mode démo (mock)** : si les identifiants Shopify, InflatableOffice,
+  Facebook ou Instagram ne sont pas configurés, le connecteur correspondant
+  génère des données d'exemple, pour pouvoir tester le serveur et le
+  dashboard immédiatement.
+- **Protection par mot de passe** (optionnelle) : `DASHBOARD_USER` /
+  `DASHBOARD_PASSWORD` (voir section dédiée).
 
 ## Installation
 
@@ -40,6 +45,33 @@ npm start
 
 Le dashboard est servi sur `http://localhost:3000` (port configurable via
 `PORT` dans `.env`).
+
+## Protection par mot de passe
+
+Le dashboard n'a **aucune authentification par défaut** (pratique pour le
+développement local). Pour le protéger (recommandé avant tout déploiement
+public, ex. Render) : renseignez **les deux** variables suivantes dans
+`.env` (ou dans les variables d'environnement Render) :
+
+```
+DASHBOARD_USER=un_nom_utilisateur
+DASHBOARD_PASSWORD=un_mot_de_passe_solide
+```
+
+Une fois les deux configurées, **tout** le dashboard (les pages ET les
+routes API `/api/*`) exige une authentification HTTP Basic — le
+navigateur affiche une boîte de dialogue standard nom d'utilisateur/mot
+de passe. Tant qu'une des deux variables est vide/absente, aucune
+authentification n'est demandée (comportement inchangé). Voir
+`server/basicAuth.js` (comparaison à temps constant, pour éviter qu'un
+attaquant devine le mot de passe via le temps de réponse) et
+`server/index.js` (monté avant toute autre route, pour que **rien** ne
+soit accessible sans authentification une fois activée).
+
+**Limite** : HTTP Basic Auth n'est sécuritaire que par-dessus HTTPS
+(les identifiants sont encodés en base64, pas chiffrés) — Render fournit
+HTTPS automatiquement, donc c'est couvert en production, mais évitez d'y
+accéder en HTTP simple (ex. réseau local non chiffré).
 
 ## Configuration des identifiants
 
@@ -317,6 +349,43 @@ Le panneau "Activité récente" (`/api/activity`) liste les ventes réelles
 les plus récentes (toutes sources confondues), pas un flux d'événements
 fabriqué — voir `getRecentActivity()`.
 
+## Réseaux sociaux
+
+Section "Réseaux sociaux" du dashboard (cartes Facebook / Instagram) :
+abonnés, croissance (7 jours), engagement (7 jours). **Données de démo**
+tant que les vraies clés API ne sont pas configurées (badge "Mode démo"
+sur chaque carte, comme pour Shopify/IO) — voir `FACEBOOK_*`/`INSTAGRAM_*`
+dans `.env.example`.
+
+**Architecture pensée pour brancher les vraies API plus tard** :
+`server/connectors/facebook.js` et `instagram.js` suivent exactement le
+même patron que `shopify.js`/`inflatableOffice.js` — une fonction
+`fetchStats()` qui retourne des données de démo (`socialMockData.js`) tant
+que `config.social.<plateforme>.configured` est faux, sinon appelle
+`fetchFromApi()`. `GET /api/social` combine les deux (indépendamment —
+`Promise.allSettled`, une erreur sur l'une n'empêche pas l'affichage de
+l'autre) et retourne aussi un flag `mock` par plateforme.
+
+**`fetchFromApi()` est déjà écrit** (contre la documentation publique de
+l'API Graph de Meta — Pages Facebook + comptes Instagram Business/Creator
+liés), **mais n'a jamais été testé contre un vrai compte/token** — à
+valider avant de faire confiance aux chiffres en production. Points les
+plus susceptibles de nécessiter un ajustement (voir les commentaires
+"ATTENTION" en tête de chaque fichier) :
+- Le nom exact des métriques d'insights (`page_fan_adds`,
+  `page_post_engagements`, `follower_count`, `reach`) change parfois de
+  version d'API à l'autre chez Meta — l'API Insights Instagram en
+  particulier est notoirement plus capricieuse que celle des Pages
+  Facebook (contraintes `since`/`until` selon le type de compte).
+- Nécessite un **Page Access Token longue durée** (pas un token
+  utilisateur qui expire vite) — généré via Meta Business Suite ou le
+  Graph API Explorer avec les permissions `pages_read_engagement` et
+  `instagram_basic`/`instagram_manage_insights`.
+
+Aucune synchronisation périodique ni stockage pour ces données — contrairement
+aux ventes (Shopify/IO), `/api/social` interroge à chaque chargement du
+dashboard (snapshot, pas des transactions à historiser).
+
 ## Métriques non disponibles (affichées honnêtement)
 
 Ces éléments de la maquette originale n'ont pas de source de données
@@ -373,10 +442,14 @@ server/
   scheduler.js         cron (toutes les 30 min) + sync au démarrage
   diagnostics.js       IP sortante du serveur (voir section dédiée)
   runtimeSettings.js   override runtime du mode IO (data/settings.json)
+  basicAuth.js         middleware HTTP Basic Auth (DASHBOARD_USER/PASSWORD)
   connectors/
     shopify.js          connecteur Shopify Admin API
     inflatableOffice.js  connecteur IO (générique, à ajuster selon la vraie API)
-    mockData.js          générateur de données de démo
+    mockData.js          générateur de données de démo (ventes)
+    facebook.js           connecteur Facebook Graph API (non testé, voir README)
+    instagram.js          connecteur Instagram Graph API (non testé, voir README)
+    socialMockData.js     générateur de données de démo (réseaux sociaux)
   services/
     sync.js              orchestre les deux connecteurs + upsert en base
     aggregate.js          calcul des périodes (semaine/mois/année fiscale) et agrégats
@@ -413,3 +486,9 @@ config/
 - `POST /api/settings/io-mode` (`{ "mode": "demo" | "real" }`) — bascule
   le mode IO au runtime et resynchronise immédiatement (voir "Bouton
   Réel / Démo").
+- `GET /api/social` — statistiques Facebook/Instagram (voir section
+  "Réseaux sociaux").
+
+Toutes les routes ci-dessus (et les pages statiques) exigent une
+authentification HTTP Basic si `DASHBOARD_USER`/`DASHBOARD_PASSWORD` sont
+configurés (voir "Protection par mot de passe").
