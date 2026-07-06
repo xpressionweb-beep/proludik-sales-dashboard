@@ -52,6 +52,14 @@ router.get('/objective', (req, res) => {
   res.json(aggregate.getGlobalObjective());
 });
 
+router.get('/status-counts-7d', (req, res) => {
+  res.json(aggregate.getStatusCounts7d());
+});
+
+router.get('/rep-conversion-summary', (req, res) => {
+  res.json(aggregate.getRepConversionSummary());
+});
+
 router.get('/trend', (req, res) => {
   const type = ['week', 'month', 'year'].includes(req.query.card) ? req.query.card : 'week';
   res.json(aggregate.getTrend(type));

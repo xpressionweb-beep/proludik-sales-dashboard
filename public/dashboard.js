@@ -198,10 +198,16 @@ async function renderBigCards() {
 }
 
 // ---------- Compteurs de statut ----------
+// Confirmés/Soumissions/VRF-Contrats: comptes sur une fenetre glissante de
+// 7 jours (pas l'annee financiere) - voir getStatusCounts7d() cote
+// serveur pour le detail exact de ce que compte chaque statut (en
+// particulier pourquoi "Soumissions" ne compte que les soumissions
+// encore ouvertes, sans logique de filtrage supplementaire necessaire).
 async function renderCounters() {
-  const yoy = await fetchJson('/api/yoy');
-  const cur = yoy.year.current.totals.io;
-  const prev = yoy.year.previousYear.totals.io;
+  const [counts7d, conversionSummary] = await Promise.all([
+    fetchJson('/api/status-counts-7d'),
+    fetchJson('/api/rep-conversion-summary'),
+  ]);
 
   const defs = [
     { key: 'Confirmé', label: 'Confirmés', icon: 'contract' },
@@ -209,19 +215,27 @@ async function renderCounters() {
     { key: 'Contrat/VFR', label: 'VRF / Contrats', icon: 'vrf' },
   ];
 
-  document.getElementById('counters').innerHTML = defs
+  const statusCards = defs
     .map(({ key, label, icon }) => {
-      const curCount = cur[key].count;
-      const prevCount = prev[key].count;
-      const changePct = prevCount ? ((curCount - prevCount) / prevCount) * 100 : curCount > 0 ? null : 0;
+      const s = counts7d.statuses[key];
       return `
         <div class="counter-card">
           <div class="counter-title"><span class="nav-icon">${iconSvg(icon)}</span>${label}</div>
-          <div class="counter-value">${num.format(curCount)}</div>
-          <div class="counter-compare">vs ${num.format(prevCount)} ${deltaBadgeHtml(changePct)}</div>
+          <div class="counter-value">${num.format(s.current)}</div>
+          <div class="counter-compare">vs ${num.format(s.previous)} (7 jours précédents) ${deltaBadgeHtml(s.changePct)}</div>
         </div>`;
     })
     .join('');
+
+  const avg = conversionSummary.average;
+  const conversionCard = `
+    <div class="counter-card">
+      <div class="counter-title"><span class="nav-icon">${iconSvg('trendUp')}</span>Conversion moyenne</div>
+      <div class="counter-value">${avg !== null ? avg.toFixed(0) + '%' : '—'}</div>
+      <div class="counter-compare">Moyenne de ${conversionSummary.repCount} représentants (année financière)</div>
+    </div>`;
+
+  document.getElementById('counters').innerHTML = statusCards + conversionCard;
 }
 
 // ---------- Tableau de performance des representants ----------
