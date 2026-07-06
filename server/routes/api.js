@@ -5,6 +5,8 @@ const aggregate = require('../services/aggregate');
 const { runSync } = require('../scheduler');
 const { getOutboundIp } = require('../diagnostics');
 const runtimeSettings = require('../runtimeSettings');
+const facebookConnector = require('../connectors/facebook');
+const instagramConnector = require('../connectors/instagram');
 
 const router = express.Router();
 
@@ -113,6 +115,27 @@ router.post('/settings/io-mode', async (req, res) => {
   const { queued } = await triggerSyncQuick('io-mode-change');
 
   res.json({ mode: config.io.configured ? 'real' : 'demo', meta: db.getMeta(), queued });
+});
+
+// Cartes "Réseaux sociaux" du dashboard: donnees de demo tant que les
+// vraies cles Facebook/Instagram ne sont pas configurees (voir
+// server/connectors/facebook.js et instagram.js). Chaque plateforme est
+// recuperee independamment (Promise.allSettled) pour qu'une erreur sur
+// l'une n'empeche pas l'affichage de l'autre.
+router.get('/social', async (req, res) => {
+  const [facebook, instagram] = await Promise.allSettled([facebookConnector.fetchStats(), instagramConnector.fetchStats()]);
+
+  function toResult(settled, mock) {
+    if (settled.status === 'fulfilled') {
+      return { ...settled.value, mock, error: null };
+    }
+    return { mock, error: settled.reason.message };
+  }
+
+  res.json({
+    facebook: toResult(facebook, !config.social.facebook.configured),
+    instagram: toResult(instagram, !config.social.instagram.configured),
+  });
 });
 
 module.exports = router;

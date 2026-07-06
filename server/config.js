@@ -17,6 +17,17 @@ module.exports = {
   // cron suivants).
   syncWatchdogMs: parseInt(process.env.SYNC_WATCHDOG_MS, 10) || 120000,
 
+  // Protection HTTP Basic Auth sur tout le dashboard (voir server/basicAuth.js).
+  // Desactivee tant que les deux variables ne sont pas fournies, pour ne
+  // pas bloquer le developpement local.
+  auth: {
+    user: process.env.DASHBOARD_USER || '',
+    password: process.env.DASHBOARD_PASSWORD || '',
+    get enabled() {
+      return Boolean(this.user && this.password);
+    },
+  },
+
   shopify: {
     shop: process.env.SHOPIFY_SHOP || '',
     // Apps "legacy" (creees avant le Dev Dashboard, jan. 2026): token statique.
@@ -59,6 +70,31 @@ module.exports = {
       const forceDemo = override ? override === 'demo' : this.forceDemo;
       if (forceDemo) return false;
       return Boolean(this.baseUrl && this.apiKey && this.salesEndpoint);
+    },
+  },
+
+  social: {
+    facebook: {
+      // Page Facebook: necessite un "Page Access Token" (longue duree) genere
+      // via un compte Meta Business/Developer - voir README section "Réseaux
+      // sociaux" pour la marche a suivre une fois pret a brancher le reel.
+      pageId: process.env.FACEBOOK_PAGE_ID || '',
+      accessToken: process.env.FACEBOOK_PAGE_ACCESS_TOKEN || '',
+      apiVersion: process.env.FACEBOOK_API_VERSION || 'v19.0',
+      get configured() {
+        return Boolean(this.pageId && this.accessToken);
+      },
+    },
+    instagram: {
+      // Compte Instagram Business/Creator relie a une Page Facebook -
+      // l'API Instagram Graph (pas l'API "Basic Display", qui ne donne pas
+      // les stats de followers) partage le meme token que la Page liee.
+      businessAccountId: process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID || '',
+      accessToken: process.env.INSTAGRAM_ACCESS_TOKEN || '',
+      apiVersion: process.env.INSTAGRAM_API_VERSION || 'v19.0',
+      get configured() {
+        return Boolean(this.businessAccountId && this.accessToken);
+      },
     },
   },
 

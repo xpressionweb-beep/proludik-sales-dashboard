@@ -25,6 +25,8 @@ const ICON_PATHS = {
   alertTriangle: '<path d="M12 4l9 16H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="17" r="0.9" fill="currentColor"/>',
   sun: '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8L6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   moon: '<path d="M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  facebook: '<path d="M14.5 8.5H13c-.3 0-.5.2-.5.5v2h2.3l-.3 2.3H12.5V21h-2.4v-7.7H8.3v-2.3h1.8V9c0-2 1.4-3.6 3.4-3.6h2z" fill="currentColor"/>',
+  instagram: '<rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16.6" cy="7.4" r="1" fill="currentColor"/>',
 };
 
 function iconSvg(name) {
@@ -320,6 +322,53 @@ async function renderActivity() {
     .join('');
 }
 
+// ---------- Reseaux sociaux ----------
+function socialCardHtml({ icon, iconClass, name, stats }) {
+  if (stats.error) {
+    return `
+      <div class="social-card">
+        <div class="social-card-header">
+          <span class="social-icon ${iconClass}">${iconSvg(icon)}</span>
+          <span class="social-name">${name}</span>
+        </div>
+        <p class="muted small">Erreur: ${stats.error}</p>
+      </div>`;
+  }
+
+  const growthCls = stats.followersGrowthPct7d >= 0 ? 'up' : 'down';
+  const growthIcon = stats.followersGrowthPct7d >= 0 ? 'arrowUp' : 'arrowDown';
+
+  return `
+    <div class="social-card">
+      <div class="social-card-header">
+        <span class="social-icon ${iconClass}">${iconSvg(icon)}</span>
+        <span class="social-name">${name}</span>
+        ${stats.mock ? '<span class="live-dot is-mock"><span class="dot"></span>Mode démo</span>' : '<span class="live-dot"><span class="dot"></span>Données réelles</span>'}
+      </div>
+      <div>
+        <span class="social-followers">${num.format(stats.followers)}</span>
+        <span class="social-followers-label">abonnés</span>
+      </div>
+      <div class="social-metrics-row">
+        <div class="social-metric">
+          <span class="delta-badge ${growthCls}"><span class="nav-icon" style="width:12px;height:12px">${iconSvg(growthIcon)}</span>${pctFmt(stats.followersGrowthPct7d)}</span>
+          <span>Croissance (7 jours)</span>
+        </div>
+        <div class="social-metric">
+          <span class="social-metric-value">${num.format(stats.engagement7d)}</span>
+          <span>Engagement (7 jours)</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function renderSocial() {
+  const { facebook, instagram } = await fetchJson('/api/social');
+  document.getElementById('socialGrid').innerHTML =
+    socialCardHtml({ icon: 'facebook', iconClass: 'facebook', name: 'Facebook', stats: facebook }) +
+    socialCardHtml({ icon: 'instagram', iconClass: 'instagram', name: 'Instagram', stats: instagram });
+}
+
 // ---------- Meta / sync ----------
 async function renderMeta() {
   const meta = await fetchJson('/api/meta');
@@ -419,7 +468,16 @@ async function initIoModeToggle() {
 }
 
 async function loadAll() {
-  await Promise.all([renderQuickMetrics(), renderBigCards(), renderCounters(), renderRepTable(), renderActivity(), renderMeta(), renderFiscalRange()]);
+  await Promise.all([
+    renderQuickMetrics(),
+    renderBigCards(),
+    renderCounters(),
+    renderRepTable(),
+    renderActivity(),
+    renderSocial(),
+    renderMeta(),
+    renderFiscalRange(),
+  ]);
   renderStaticIcons();
 }
 
