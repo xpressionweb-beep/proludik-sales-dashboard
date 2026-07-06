@@ -13,12 +13,7 @@
   <div class="app-shell">
     <nav class="sidebar" aria-label="Navigation principale">
       <div class="sidebar-logo">
-        <img
-          class="brand-mark"
-          src="assets/proludik_h_rouge_blanc.png"
-          alt="Proludik"
-          onerror="this.style.display='none'; document.getElementById('brandFallback').style.display='flex';"
-        />
+        <img class="brand-mark" id="brandLogo" alt="Proludik" />
         <div class="brand-fallback" id="brandFallback">
           <span class="brand-fallback-mark">P</span>
           <span class="brand-fallback-text">PROLUDIK</span>
@@ -53,6 +48,9 @@
           VOTRE ENTREPRISE. <span class="accent">EN TEMPS RÉEL.</span>
         </div>
         <div class="topbar-fiscal">
+          <button id="themeToggle" class="theme-toggle-btn" type="button" title="Changer de thème" aria-label="Changer de thème">
+            <span class="nav-icon" data-icon="sun"></span>
+          </button>
           <span class="nav-icon" data-icon="calendar"></span>
           <div>
             <div class="fiscal-label">Année financière</div>
