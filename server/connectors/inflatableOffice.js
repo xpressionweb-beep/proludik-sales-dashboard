@@ -1,5 +1,5 @@
 const config = require('../config');
-const { generateMockSales } = require('./mockData');
+const { generateMockSales, generateIoPresentationSales, fiscalYearStart } = require('./mockData');
 
 const SOURCE = 'io';
 
@@ -152,15 +152,26 @@ async function fetchFromApi(sinceIso) {
 
 async function fetchSales({ sinceIso }) {
   if (!config.io.configured) {
-    console.warn('[io] IO_API_BASE_URL / IO_API_KEY non configures - mode MOCK actif.');
-    return generateMockSales({
+    console.warn('[io] IO_API_BASE_URL / IO_API_KEY non configures - mode MOCK actif (donnees de presentation).');
+
+    // Donnees de presentation (chiffres precis demandes par le client) pour
+    // l'annee financiere en cours - voir README "Mode démo InflatableOffice
+    // (présentation)". Pour tout ce qui precede le debut de l'annee
+    // financiere (annees/mois anterieurs, utilises pour les comparatifs
+    // "vs l'an dernier"), on garde l'ancien generateur aleatoire generique.
+    const fyStart = fiscalYearStart(new Date(), config.fiscalYearStartMonth);
+    const filler = generateMockSales({
       seed: 2,
       daysBack: config.io.initialSyncDays,
       perWeek: 6,
       statuses: config.io.statuses,
       minAmount: 200,
       maxAmount: 4000,
-    }).map((r) => ({ ...r, source: SOURCE }));
+    }).filter((r) => new Date(r.orderDate) < fyStart);
+
+    const presentation = generateIoPresentationSales({ fiscalYearStartMonth: config.fiscalYearStartMonth });
+
+    return [...filler, ...presentation].map((r) => ({ ...r, source: SOURCE }));
   }
 
   return fetchFromApi(sinceIso);
