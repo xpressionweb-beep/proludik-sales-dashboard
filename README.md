@@ -143,6 +143,23 @@ Vérifié avec un serveur fixture qui accepte la connexion mais ne répond
 jamais : la sync échoue proprement après le timeout (au lieu de bloquer),
 et le cycle suivant s'exécute normalement (pas de "déjà en cours").
 
+### Diagnostic : IP sortante du serveur
+
+Si l'API IO fonctionne depuis un navigateur normal mais échoue
+systématiquement en timeout depuis Render, ça peut indiquer un blocage par
+IP côté rental.software (leur pare-feu n'autorise pas l'IP sortante de
+Render). Pour vérifier/fournir cette IP :
+
+- **Au démarrage** : loggée automatiquement (`server/diagnostics.js`,
+  appelé dans `server/index.js`), ex. `[diagnostic] IP sortante du
+  serveur: 34.XX.XX.XX` — visible dans les logs Render, y compris après
+  chaque redéploiement (l'IP peut changer).
+- **À la demande** : `GET /api/diagnostics/ip` — pratique pour vérifier
+  sans fouiller les logs.
+
+Cette IP est celle à fournir au support rental.software si le blocage est
+confirmé de leur côté (allowlist IP à ajuster).
+
 ## Objectifs de vente par représentant
 
 Fichier `config/objectifs.json` : objectif annuel par représentant et par
@@ -249,6 +266,7 @@ server/
   config.js           lecture des variables d'environnement
   db.js                stockage JSON (data/sales.json, data/meta.json)
   scheduler.js         cron (toutes les 30 min) + sync au démarrage
+  diagnostics.js       IP sortante du serveur (voir section dédiée)
   connectors/
     shopify.js          connecteur Shopify Admin API
     inflatableOffice.js  connecteur IO (générique, à ajuster selon la vraie API)
@@ -282,3 +300,5 @@ config/
 - `GET /api/meta` — état de la dernière synchronisation par source (dernier
   succès, erreurs, mode démo).
 - `POST /api/sync` — déclenche une synchronisation manuelle immédiate.
+- `GET /api/diagnostics/ip` — IP sortante du serveur (voir section
+  "Diagnostic : IP sortante du serveur").

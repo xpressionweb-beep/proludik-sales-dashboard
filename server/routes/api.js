@@ -3,6 +3,7 @@ const config = require('../config');
 const db = require('../db');
 const aggregate = require('../services/aggregate');
 const { runSync } = require('../scheduler');
+const { getOutboundIp } = require('../diagnostics');
 
 const router = express.Router();
 
@@ -50,6 +51,17 @@ router.get('/meta', (req, res) => {
 router.post('/sync', async (req, res) => {
   await runSync('manual');
   res.json({ ok: true, meta: db.getMeta() });
+});
+
+// Diagnostic: IP sortante du serveur, a fournir a un fournisseur (ex.
+// rental.software) en cas de blocage par IP. Loggee aussi au demarrage.
+router.get('/diagnostics/ip', async (req, res) => {
+  try {
+    const ip = await getOutboundIp();
+    res.json({ ip });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
 });
 
 module.exports = router;
