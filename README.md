@@ -239,14 +239,29 @@ chiffre :
   installations) — nécessiteraient un suivi commercial, des dépôts et un
   calendrier d'installation qu'on ne synchronise pas aujourd'hui.
 
+## Thème clair / sombre
+
+Bouton de bascule dans le header (icône soleil/lune, à droite). Même
+structure, mêmes composants, mêmes données dans les deux thèmes — seules
+les couleurs changent (variables CSS dans `public/styles.css`, bloc
+`:root[data-theme="light"]`). Le rouge de marque (`--brand-red`) et le
+navy (`--brand-navy`) restent identiques dans les deux thèmes ; le thème
+clair utilise en plus une légère ombre portée sur les cartes
+(`--card-shadow`). Le choix est mémorisé dans `localStorage` (thème sombre
+par défaut si jamais choisi).
+
 ## Logo
 
-Le header référence `public/assets/proludik_h_rouge_blanc.png` (logo
-horizontal rouge/blanc). **Le vrai fichier n'est pas encore dans le
-dépôt** — déposez-le à ce chemin exact (voir `public/assets/README.md`).
-Tant qu'il est absent, un logo de repli ("P" + "PROLUDIK" en CSS) s'affiche
-automatiquement ; aucune modification de code n'est nécessaire une fois le
-vrai fichier commité.
+Le header référence deux fichiers, un par thème (`THEME_LOGO_PATHS` dans
+`public/dashboard.js`) :
+- `public/assets/proludik_h_rouge_blanc.png` — thème sombre (texte blanc)
+- `public/assets/proludik_h_rouge_navy.png` — thème clair (texte navy/rouge)
+
+**Aucun des deux fichiers n'est encore dans le dépôt** — déposez-les à ces
+chemins exacts (voir `public/assets/README.md`). Tant qu'un fichier est
+absent, un logo de repli ("P" + "PROLUDIK" en CSS, couleur adaptée au
+thème actif) s'affiche automatiquement pour ce thème ; aucune modification
+de code n'est nécessaire une fois les vrais fichiers commités.
 
 La police **Barlow** est chargée depuis Google Fonts (`fonts.googleapis.com`)
 — nécessite un accès réseau sortant vers ce domaine en production (normal

@@ -23,6 +23,8 @@ const ICON_PATHS = {
   arrowUp: '<path d="M12 19V6M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   arrowDown: '<path d="M12 5v13M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   alertTriangle: '<path d="M12 4l9 16H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="17" r="0.9" fill="currentColor"/>',
+  sun: '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8L6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
 };
 
 function iconSvg(name) {
@@ -33,6 +35,42 @@ function renderStaticIcons() {
   document.querySelectorAll('[data-icon]').forEach((el) => {
     el.innerHTML = iconSvg(el.dataset.icon);
   });
+}
+
+// ---------- Theme clair/sombre ----------
+// Meme structure et memes donnees dans les deux themes - seules les
+// couleurs (variables CSS) et le logo changent. Prefere localStorage a
+// prefers-color-scheme: c'est un choix explicite de l'utilisateur via le
+// bouton, pas un suivi automatique du systeme.
+const THEME_STORAGE_KEY = 'proludik-theme';
+const THEME_LOGO_PATHS = {
+  dark: 'assets/proludik_h_rouge_blanc.png',
+  light: 'assets/proludik_h_rouge_navy.png',
+};
+
+function applyLogoForTheme(theme) {
+  const img = document.getElementById('brandLogo');
+  const fallback = document.getElementById('brandFallback');
+  img.style.display = '';
+  fallback.style.display = 'none';
+  img.onerror = () => {
+    img.style.display = 'none';
+    fallback.style.display = 'flex';
+  };
+  img.src = THEME_LOGO_PATHS[theme];
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const toggleIcon = document.querySelector('#themeToggle .nav-icon');
+  if (toggleIcon) toggleIcon.innerHTML = iconSvg(theme === 'dark' ? 'sun' : 'moon');
+  applyLogoForTheme(theme);
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE_KEY);
+  applyTheme(saved === 'light' ? 'light' : 'dark');
 }
 
 // ---------- Horloge / date en direct ----------
@@ -332,7 +370,13 @@ document.getElementById('syncNowBtn').addEventListener('click', async (e) => {
   }
 });
 
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  applyTheme(current === 'light' ? 'dark' : 'light');
+});
+
 renderStaticIcons();
+initTheme();
 updateClock();
 setInterval(updateClock, 1000);
 
