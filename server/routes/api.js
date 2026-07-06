@@ -8,6 +8,30 @@ const runtimeSettings = require('../runtimeSettings');
 
 const router = express.Router();
 
+// Une sync peut rester en file d'attente jusqu'a config.syncWatchdogMs
+// (par defaut 120s) si une sync precedente est bloquee - voir
+// scheduler.js. On ne veut pas faire pendre la requete HTTP (et donc le
+// navigateur) aussi longtemps: on attend un court instant, et si la sync
+// n'est pas terminee, on repond immediatement avec `queued: true` en
+// laissant la sync continuer/se terminer en arriere-plan (elle mettra a
+// jour data/sales.json toute seule; voir scheduler.js pour la garantie
+// qu'elle ne sera jamais ignoree, juste retardee).
+const QUICK_SYNC_MS = 4000;
+
+async function triggerSyncQuick(trigger) {
+  const syncPromise = runSync(trigger);
+  const outcome = await Promise.race([
+    syncPromise.then(() => 'done').catch(() => 'done'),
+    new Promise((resolve) => setTimeout(() => resolve('queued'), QUICK_SYNC_MS)),
+  ]);
+
+  if (outcome === 'queued') {
+    syncPromise.catch((err) => console.error(`[api] sync differee (${trigger}) en erreur:`, err.message));
+  }
+
+  return { queued: outcome === 'queued' };
+}
+
 router.get('/overview', (req, res) => {
   res.json(aggregate.getOverview());
 });
@@ -50,8 +74,8 @@ router.get('/meta', (req, res) => {
 
 // Permet de forcer une synchronisation manuelle depuis le dashboard.
 router.post('/sync', async (req, res) => {
-  await runSync('manual');
-  res.json({ ok: true, meta: db.getMeta() });
+  const { queued } = await triggerSyncQuick('manual');
+  res.json({ ok: true, meta: db.getMeta(), queued });
 });
 
 // Diagnostic: IP sortante du serveur, a fournir a un fournisseur (ex.
@@ -81,10 +105,14 @@ router.post('/settings/io-mode', async (req, res) => {
 
   runtimeSettings.setIoModeOverride(mode);
   // Resynchronise tout de suite pour que le changement soit visible sans
-  // attendre le prochain cycle cron.
-  await runSync('io-mode-change');
+  // attendre le prochain cycle cron. Si une sync precedente est deja en
+  // cours (ex: bloquee sur un timeout IO), celle-ci est mise en file
+  // d'attente (jamais ignoree - voir scheduler.js) et se declenchera
+  // automatiquement a la suite; on ne fait pas pendre la reponse HTTP
+  // au-dela de QUICK_SYNC_MS dans ce cas (voir `queued` dans la reponse).
+  const { queued } = await triggerSyncQuick('io-mode-change');
 
-  res.json({ mode: config.io.configured ? 'real' : 'demo', meta: db.getMeta() });
+  res.json({ mode: config.io.configured ? 'real' : 'demo', meta: db.getMeta(), queued });
 });
 
 module.exports = router;

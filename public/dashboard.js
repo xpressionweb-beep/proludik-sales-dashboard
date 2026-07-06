@@ -374,6 +374,26 @@ function renderIoModeButton(mode) {
   btn.disabled = false;
 }
 
+// Si le serveur avait deja une sync en cours (ex: bloquee sur un timeout
+// IO), la nouvelle demande est mise en file d'attente cote serveur - voir
+// scheduler.js - et se declenchera automatiquement, mais pas assez vite
+// pour qu'on attende la reponse HTTP (voir triggerSyncQuick dans
+// server/routes/api.js). On previent l'utilisateur plutot que de faire
+// comme si tout etait deja a jour.
+let queuedNoticeTimer = null;
+function showQueuedNotice() {
+  const notice = document.getElementById('queuedNotice');
+  const sep = document.getElementById('queuedSep');
+  notice.textContent = 'Une synchronisation était déjà en cours — celle-ci se déclenchera automatiquement à la suite (données pas encore à jour).';
+  notice.hidden = false;
+  sep.hidden = false;
+  clearTimeout(queuedNoticeTimer);
+  queuedNoticeTimer = setTimeout(() => {
+    notice.hidden = true;
+    sep.hidden = true;
+  }, 20000);
+}
+
 async function initIoModeToggle() {
   const btn = document.getElementById('ioModeToggle');
   const { mode } = await fetchJson('/api/settings/io-mode');
@@ -389,6 +409,7 @@ async function initIoModeToggle() {
         body: JSON.stringify({ mode: nextMode }),
       });
       renderIoModeButton(result.mode);
+      if (result.queued) showQueuedNotice();
       await loadAll();
     } catch (err) {
       console.error(err);
@@ -407,7 +428,8 @@ document.getElementById('syncNowBtn').addEventListener('click', async (e) => {
   btn.disabled = true;
   btn.textContent = 'Synchronisation…';
   try {
-    await fetchJson('/api/sync', { method: 'POST' });
+    const result = await fetchJson('/api/sync', { method: 'POST' });
+    if (result.queued) showQueuedNotice();
     await loadAll();
   } finally {
     btn.disabled = false;
