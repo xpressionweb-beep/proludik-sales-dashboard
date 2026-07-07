@@ -564,6 +564,16 @@ config/
   aussi loggé côté serveur (`[sync] shopify: donnees demandees depuis...`)
   dans ce cas. Voir `dateRange()` dans `server/services/sync.js`.
 - `POST /api/sync` — déclenche une synchronisation manuelle immédiate.
+- `POST /api/admin/reset-sync?source=shopify|io` — force une
+  resynchronisation **complète** d'une source (efface `lastSuccessAt` de
+  cette source dans `data/meta.json`, donc le prochain cycle repart de
+  `initialSyncDays` au complet plutôt que de la dernière sync
+  incrémentale), puis déclenche une sync immédiate. Utile après une
+  correction d'accès côté fournisseur (ex: scope Shopify
+  `read_all_orders` approuvé après coup — voir la section `/api/meta`
+  ci-dessus). Ne supprime **pas** les ventes déjà stockées : le prochain
+  sync les met à jour par upsert (même `externalId`), sans doublons.
+  Protégé par la même auth Basic que le reste du dashboard.
 - `GET /api/diagnostics/ip` — IP sortante du serveur (voir section
   "Diagnostic : IP sortante du serveur").
 - `GET /api/settings/io-mode` — mode IO effectif actuel (`{ "mode":
