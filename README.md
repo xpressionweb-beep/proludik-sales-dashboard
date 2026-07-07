@@ -552,7 +552,17 @@ config/
   sparkline de la carte correspondante.
 - `GET /api/activity?limit=8` — les N ventes réelles les plus récentes.
 - `GET /api/meta` — état de la dernière synchronisation par source (dernier
-  succès, erreurs, mode démo).
+  succès, erreurs, mode démo). Inclut aussi, par source, `requestedSinceIso`
+  (depuis quand la sync a demandé des données), `oldestRecordDate` /
+  `newestRecordDate` (l'étendue réelle des enregistrements reçus) et
+  `lastRecordCount`. Utile pour diagnostiquer un écart entre les vraies
+  données du fournisseur (ex: Shopify Analytics) et le dashboard : si
+  `oldestRecordDate` est nettement plus récent que `requestedSinceIso`,
+  l'API du fournisseur limite l'accès à l'historique (ex: Shopify sans le
+  scope `read_all_orders` approuvé ne renvoie que les commandes des ~60
+  derniers jours, peu importe la date demandée) — un avertissement est
+  aussi loggé côté serveur (`[sync] shopify: donnees demandees depuis...`)
+  dans ce cas. Voir `dateRange()` dans `server/services/sync.js`.
 - `POST /api/sync` — déclenche une synchronisation manuelle immédiate.
 - `GET /api/diagnostics/ip` — IP sortante du serveur (voir section
   "Diagnostic : IP sortante du serveur").

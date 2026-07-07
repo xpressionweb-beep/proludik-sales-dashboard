@@ -26,6 +26,26 @@ function sinceIsoFor(source, initialSyncDays) {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
+// Renvoie la date la plus ancienne/recente (orderDate) parmi les
+// enregistrements recuperes lors d'une sync. Sert de diagnostic: si on
+// demande `sinceIso` tres dans le passe mais que la date la plus ancienne
+// recue est beaucoup plus recente, c'est le signe d'une limite d'acces
+// cote fournisseur (ex: Shopify ne donne acces qu'aux commandes des 60
+// derniers jours aux apps sans le scope `read_all_orders` approuve) plutot
+// que d'un bug de pagination cote serveur.
+function dateRange(records) {
+  if (!records.length) return { oldest: null, newest: null };
+  let oldest = records[0].orderDate;
+  let newest = records[0].orderDate;
+  for (const r of records) {
+    if (r.orderDate < oldest) oldest = r.orderDate;
+    if (r.orderDate > newest) newest = r.orderDate;
+  }
+  return { oldest, newest };
+}
+
+const HISTORY_GAP_WARNING_MS = 5 * 24 * 60 * 60 * 1000; // 5 jours
+
 // Garde-fou de dernier recours: chaque requete HTTP individuelle a deja un
 // timeout (voir config.httpTimeoutMs dans les connecteurs), mais on
 // s'assure ici que meme un blocage imprevu (pagination qui boucle sans
@@ -52,10 +72,27 @@ async function syncSource({ source, fetchSales, initialSyncDays, isMock }) {
     // trainer d'anciens enregistrements (real ou mock) qui fausseraient les
     // agregats (voir server/db.js:replaceSourceSales).
     const result = isMock && isMock() ? db.replaceSourceSales(source, records) : db.upsertSales(records);
+    const { oldest, newest } = dateRange(records);
+
+    if (!isMock || !isMock()) {
+      if (oldest && new Date(oldest).getTime() - new Date(sinceIso).getTime() > HISTORY_GAP_WARNING_MS) {
+        const gapDays = Math.round((new Date(oldest).getTime() - new Date(sinceIso).getTime()) / (24 * 60 * 60 * 1000));
+        console.warn(
+          `[sync] ${source}: donnees demandees depuis ${sinceIso}, mais le plus ancien enregistrement recu date de ` +
+          `${oldest} (${gapDays} jours plus tard). Si cet ecart est inattendu, verifie les droits d'acces a ` +
+          `l'historique cote fournisseur (ex: scope Shopify "read_all_orders" - sans lui, l'API ne renvoie que les ` +
+          `commandes des ~60 derniers jours, meme si created_at_min demande plus loin dans le passe).`
+        );
+      }
+    }
+
     db.setSourceMeta(source, {
       lastSuccessAt: startedAt,
       lastError: null,
       lastRecordCount: records.length,
+      requestedSinceIso: sinceIso,
+      oldestRecordDate: oldest,
+      newestRecordDate: newest,
       ...result,
     });
     return { source, ok: true, ...result };
