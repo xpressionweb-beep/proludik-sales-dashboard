@@ -7,6 +7,7 @@ const { getOutboundIp } = require('../diagnostics');
 const runtimeSettings = require('../runtimeSettings');
 const facebookConnector = require('../connectors/facebook');
 const instagramConnector = require('../connectors/instagram');
+const shopifyConnector = require('../connectors/shopify');
 
 const router = express.Router();
 
@@ -132,6 +133,27 @@ router.post('/admin/reset-sync', async (req, res) => {
   });
 
   res.json({ ok: true, sources, meta: db.getMeta(), queued });
+});
+
+// Diagnostic: force l'obtention d'un nouveau token OAuth Shopify (ignore le
+// cache en memoire) pour verifier immediatement, via les logs serveur et la
+// reponse ci-dessous, le scope reellement accorde par Shopify (ex: confirmer
+// si read_all_orders est bien pris en compte apres une modif du Dev
+// Dashboard, sans attendre l'expiration naturelle du cache ~24h).
+router.post('/diagnostics/shopify-token-refresh', async (req, res) => {
+  if (config.shopify.accessToken) {
+    return res.status(400).json({ error: 'App configuree avec un token statique (pas de flux OAuth a rafraichir).' });
+  }
+  if (!config.shopify.clientId || !config.shopify.clientSecret) {
+    return res.status(400).json({ error: 'SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET non configures.' });
+  }
+
+  try {
+    await shopifyConnector.getAccessToken({ forceRefresh: true });
+    res.json({ ok: true, scope: shopifyConnector.getCachedScope() });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
 });
 
 // Diagnostic: IP sortante du serveur, a fournir a un fournisseur (ex.

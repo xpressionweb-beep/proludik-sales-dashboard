@@ -41,8 +41,13 @@ async function requestAccessToken() {
     value: json.access_token,
     // Marge de securite de 5 minutes avant l'expiration reelle.
     expiresAt: Date.now() + expiresInMs - 5 * 60 * 1000,
+    scope: json.scope || '',
   };
   console.log(`[shopify] Token OAuth (client credentials) obtenu, expire dans ${Math.round(expiresInMs / 1000)}s.`);
+  // Le champ "scope" liste les permissions reellement accordees par Shopify
+  // au token - utile pour confirmer qu'un scope demande (ex: read_all_orders)
+  // a bien ete pris en compte plutot que de se fier a la config de l'app.
+  console.log(`[shopify] Scope accorde par Shopify: ${json.scope || '(absent de la reponse)'}`);
   return cachedToken.value;
 }
 
@@ -161,4 +166,4 @@ async function fetchSales({ sinceIso }) {
   return fetchFromApi(sinceIso);
 }
 
-module.exports = { fetchSales, SOURCE };
+module.exports = { fetchSales, SOURCE, getAccessToken, getCachedScope: () => (cachedToken ? cachedToken.scope : null) };
