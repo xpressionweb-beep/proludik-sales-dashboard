@@ -20,8 +20,8 @@ const router = express.Router();
 // qu'elle ne sera jamais ignoree, juste retardee).
 const QUICK_SYNC_MS = 4000;
 
-async function triggerSyncQuick(trigger) {
-  const syncPromise = runSync(trigger);
+async function triggerSyncQuick(trigger, opts) {
+  const syncPromise = runSync(trigger, opts);
   const outcome = await Promise.race([
     syncPromise.then(() => 'done').catch(() => 'done'),
     new Promise((resolve) => setTimeout(() => resolve('queued'), QUICK_SYNC_MS)),
@@ -92,24 +92,46 @@ router.post('/sync', async (req, res) => {
 // inflatableOffice.SOURCE (voir server/connectors/*.js).
 const VALID_SYNC_SOURCES = ['shopify', 'io'];
 
-// Force une resynchronisation complete d'une source (ex: apres correction
-// d'un probleme d'acces cote fournisseur - scope Shopify read_all_orders
-// approuve apres coup, par exemple). Deja protege par l'auth Basic
-// globale (voir server/index.js) quand DASHBOARD_USER/PASSWORD sont
-// configures. N'efface pas les ventes deja stockees: le prochain sync les
-// met a jour par upsert (meme externalId) plutot que de les dupliquer -
-// voir db.resetSourceMeta().
+// Force une resynchronisation complete d'une (ou des deux, "all") source(s)
+// (ex: apres correction d'un probleme d'acces cote fournisseur - scope
+// Shopify read_all_orders approuve apres coup - ou pour purger de vieux
+// enregistrements de demo restes melanges a des donnees reelles apres un
+// changement de mode). Deja protege par l'auth Basic globale (voir
+// server/index.js) quand DASHBOARD_USER/PASSWORD sont configures.
+//
+// Cible explicitement la ou les sources demandees (`onlySources`): une
+// resync Shopify ne declenche pas aussi IO (et inversement), pour eviter
+// qu'un probleme sur l'AUTRE source (ex: timeout) ne pollue la reponse
+// d'un reset qui ne la concernait pas.
+//
+// Remplace entierement (`forceReplaceSources`) les enregistrements de la
+// source, sur une fenetre complete (`forceFullResyncSources`, ignore
+// lastSuccessAt) - voir services/sync.js:syncSource pour le detail. Ce
+// n'est PAS un simple "effacer lastSuccessAt puis resynchroniser": ces
+// deux flags sont portes par l'appel de sync lui-meme, donc le resultat
+// est correct meme si une autre sync (cron, bouton "Synchroniser
+// maintenant") est deja en cours au moment de l'appel et se termine apres
+// (cf. commentaire dans syncSource).
 router.post('/admin/reset-sync', async (req, res) => {
-  const source = req.query.source || (req.body && req.body.source);
-  if (!VALID_SYNC_SOURCES.includes(source)) {
-    return res.status(400).json({ error: `source doit etre l'un de: ${VALID_SYNC_SOURCES.join(', ')}.` });
+  const raw = req.query.source || (req.body && req.body.source);
+  const sources = raw === 'all' ? VALID_SYNC_SOURCES : VALID_SYNC_SOURCES.includes(raw) ? [raw] : null;
+  if (!sources) {
+    return res.status(400).json({ error: `source doit etre l'un de: ${VALID_SYNC_SOURCES.join(', ')}, all.` });
   }
 
-  db.resetSourceMeta(source);
-  console.log(`[api] Reset de sync demande pour "${source}" - le prochain cycle repartira depuis initialSyncDays.`);
-  const { queued } = await triggerSyncQuick(`reset-sync:${source}`);
+  // Purement cosmetique/immediat (voir syncSource: le comportement correct
+  // ne depend plus de cet effacement, seulement des flags force* ci-dessous) -
+  // evite d'afficher une etendue de donnees perimee si /api/meta est
+  // consulte pendant que la resync est encore en cours.
+  for (const s of sources) db.resetSourceMeta(s);
+  console.log(`[api] Reset de sync demande pour [${sources.join(', ')}] - resynchronisation complete forcee.`);
+  const { queued } = await triggerSyncQuick(`reset-sync:${sources.join(',')}`, {
+    onlySources: sources,
+    forceFullResyncSources: sources,
+    forceReplaceSources: sources,
+  });
 
-  res.json({ ok: true, source, meta: db.getMeta(), queued });
+  res.json({ ok: true, sources, meta: db.getMeta(), queued });
 });
 
 // Diagnostic: IP sortante du serveur, a fournir a un fournisseur (ex.

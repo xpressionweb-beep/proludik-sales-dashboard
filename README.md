@@ -275,16 +275,33 @@ de présentation : dans `server/connectors/inflatableOffice.js`
 repasser `generateMockSales()` sur toute la période comme avant (voir
 l'historique git de ce fichier).
 
-Basculer entre Réel et Démo ne mélange pas les données : à chaque sync,
-si la source (`shopify` ou `io`) est détectée en mode mock, ses
-enregistrements sont entièrement remplacés (pas d'upsert) par le lot
-généré — voir `db.replaceSourceSales()` et `services/sync.js`. Les
-éventuels enregistrements laissés par une tentative réelle précédente (ou
-par une ancienne génération de données de démo) sont donc purgés
-automatiquement dès la prochaine sync en mode mock, sans intervention
-manuelle. Seul le mode Réel continue d'utiliser un upsert incrémental
-(`sinceIso`), pour ne jamais perdre l'historique des ventes déjà
-récupérées.
+Basculer entre Réel et Démo ne mélange pas les données, **dans les deux
+sens** : chaque sync mémorise si la source (`shopify` ou `io`) était en
+mode mock (`lastKnownMock` dans `data/meta.json`). Si ce mode a changé
+depuis la sync précédente (démo→réel *ou* réel→démo), les enregistrements
+de la source sont entièrement **remplacés** (pas upsertés) par le nouveau
+lot — voir `db.replaceSourceSales()` et `syncSource()` dans
+`services/sync.js`. Sans ça, un enregistrement de démo (externalId
+fictif, jamais renvoyé par la vraie API) resterait pour toujours mélangé
+aux vraies données après un passage en mode Réel, faussant durablement le
+tableau des représentants même une fois les vraies clés en place. En
+quittant le mode mock, la sync force aussi une fenêtre complète
+(`initialSyncDays`, pas seulement incrémentale) avant de remplacer, pour
+ne pas perdre l'historique réel déjà accumulé avant le passage en démo.
+
+En dehors d'un changement de mode, le mode Réel continue d'utiliser un
+upsert incrémental (`sinceIso` = dernière sync réussie), pour ne jamais
+perdre l'historique des ventes déjà récupérées ; le mode mock continue de
+tout remplacer à chaque sync (le générateur produit toujours son jeu
+complet).
+
+**Limite** : la détection de changement de mode ne s'applique qu'à partir
+du moment où `lastKnownMock` existe dans la meta — au tout premier sync
+suivant le déploiement de cette fonctionnalité, aucun changement n'est
+présumé (comportement inchangé). Si des enregistrements de démo
+s'étaient déjà accumulés *avant* ce déploiement, utilisez
+`POST /api/admin/reset-sync` (voir plus bas) une fois pour purger et
+repartir sur une base propre.
 
 ## Objectifs de vente par représentant
 
@@ -564,15 +581,24 @@ config/
   aussi loggé côté serveur (`[sync] shopify: donnees demandees depuis...`)
   dans ce cas. Voir `dateRange()` dans `server/services/sync.js`.
 - `POST /api/sync` — déclenche une synchronisation manuelle immédiate.
-- `POST /api/admin/reset-sync?source=shopify|io` — force une
-  resynchronisation **complète** d'une source (efface `lastSuccessAt` de
-  cette source dans `data/meta.json`, donc le prochain cycle repart de
-  `initialSyncDays` au complet plutôt que de la dernière sync
-  incrémentale), puis déclenche une sync immédiate. Utile après une
-  correction d'accès côté fournisseur (ex: scope Shopify
+- `POST /api/admin/reset-sync?source=shopify|io|all` — force une
+  resynchronisation **complète et exclusive** de la (ou des, `all`)
+  source(s) demandée(s) : fenêtre complète (`initialSyncDays`, ignore la
+  dernière sync réussie) **et** remplacement total des enregistrements de
+  cette source (pas upsert), même si le mode n'a pas changé. Ne touche
+  **pas** l'autre source (un reset Shopify ne déclenche pas aussi IO, et
+  inversement) — évite qu'un problème sur l'autre source (lente, bloquée)
+  ne pollue la réponse d'un reset qui ne la concernait pas. Robuste aux
+  syncs concurrentes : les flags "fenêtre complète" et "remplacement" sont
+  portés par cet appel de sync précis, pas par un simple effacement de
+  `data/meta.json` qu'une autre sync en cours pourrait écraser après coup
+  — voir le commentaire au-dessus de `syncSource()` dans
+  `services/sync.js` pour le détail de cette course évitée.
+  Utile après une correction d'accès côté fournisseur (ex: scope Shopify
   `read_all_orders` approuvé après coup — voir la section `/api/meta`
-  ci-dessus). Ne supprime **pas** les ventes déjà stockées : le prochain
-  sync les met à jour par upsert (même `externalId`), sans doublons.
+  ci-dessus) ou pour purger manuellement de vieux enregistrements de démo
+  accumulés avant le déploiement de la détection automatique de
+  changement de mode (voir section "Bouton Réel/Démo" plus haut).
   Protégé par la même auth Basic que le reste du dashboard. Accessible
   depuis le dashboard via le bouton "Resynchroniser Shopify (complet)"
   dans le pied de page, à côté de "Synchroniser maintenant" (demande une

@@ -62,28 +62,67 @@ function withWatchdog(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-async function syncSource({ source, fetchSales, initialSyncDays, isMock }) {
-  const sinceIso = sinceIsoFor(source, initialSyncDays);
+// `forceFullResync`: ignore lastSuccessAt et repart de initialSyncDays,
+// peu importe l'etat courant de la meta - utilise par
+// POST /api/admin/reset-sync. Contrairement a un simple "effacer
+// lastSuccessAt puis resynchroniser", ce flag ne depend d'aucune lecture
+// de meta au moment ou la sync demarre reellement: si une AUTRE sync
+// (cron, bouton "Synchroniser maintenant", etc.) etait deja en cours au
+// moment du reset et finit APRES lui en ecrasant la meta avec une valeur
+// perimee, la sync forcee (mise en file d'attente derriere) recalcule
+// quand meme son sinceIso a partir de initialSyncDays et non de cette
+// meta - le reset ne peut donc pas etre "efface" par une course entre
+// deux syncs concurrentes.
+//
+// `forceReplace`: remplace entierement les enregistrements de la source
+// (voir db.replaceSourceSales) plutot que d'upserter, meme en mode reel.
+async function syncSource({ source, fetchSales, initialSyncDays, isMock, forceFullResync = false, forceReplace = false }) {
+  const metaBefore = db.getMeta();
+  const previousLastKnownMock = metaBefore.sources && metaBefore.sources[source] && metaBefore.sources[source].lastKnownMock;
+  const currentlyMock = Boolean(isMock && isMock());
+  // Vrai uniquement si on CONNAISSAIT deja le mode precedent (pas au tout
+  // premier sync apres l'ajout de ce champ) et qu'il a change depuis.
+  const modeChanged = previousLastKnownMock !== undefined && previousLastKnownMock !== currentlyMock;
+
+  // En quittant le mode mock, un simple sync incremental ne recupererait
+  // que les commandes recentes - insuffisant pour remplacer proprement
+  // (on perdrait l'historique reel jamais encore resynchronise depuis que
+  // la source etait en mock). On force donc une fenetre complete dans ce
+  // cas precis, en plus de quand c'est explicitement demande.
+  const effectiveForceFullResync = forceFullResync || (modeChanged && !currentlyMock);
+  const sinceIso = effectiveForceFullResync
+    ? new Date(Date.now() - initialSyncDays * 24 * 60 * 60 * 1000).toISOString()
+    : sinceIsoFor(source, initialSyncDays);
+
   const startedAt = new Date().toISOString();
   try {
     const records = await withWatchdog(fetchSales({ sinceIso }), config.syncWatchdogMs, `sync ${source}`);
-    // En mode mock, le generateur renvoie a chaque fois son jeu de donnees
-    // complet: on remplace plutot que d'upserter, pour ne jamais laisser
-    // trainer d'anciens enregistrements (real ou mock) qui fausseraient les
-    // agregats (voir server/db.js:replaceSourceSales).
-    const result = isMock && isMock() ? db.replaceSourceSales(source, records) : db.upsertSales(records);
+    // Remplace entierement (plutot qu'upsert incremental) si: la source
+    // est actuellement en mode mock (le generateur renvoie toujours son
+    // jeu complet - voir replaceSourceSales), OU si le mode vient de
+    // changer depuis la derniere sync (mock<->reel: les enregistrements
+    // de l'AUTRE mode ont des externalId distincts, un upsert seul ne les
+    // retirerait jamais et ils resteraient melanges indefiniment), OU si
+    // demande explicitement (reset manuel).
+    if (modeChanged) {
+      console.log(
+        `[sync] ${source}: changement de mode detecte (${previousLastKnownMock ? 'demo' : 'reel'} -> ` +
+        `${currentlyMock ? 'demo' : 'reel'}) - remplacement complet des donnees plutot qu'ajout, pour ne pas ` +
+        `melanger les deux jeux de donnees.`
+      );
+    }
+    const shouldReplace = forceReplace || currentlyMock || modeChanged;
+    const result = shouldReplace ? db.replaceSourceSales(source, records) : db.upsertSales(records);
     const { oldest, newest } = dateRange(records);
 
-    if (!isMock || !isMock()) {
-      if (oldest && new Date(oldest).getTime() - new Date(sinceIso).getTime() > HISTORY_GAP_WARNING_MS) {
-        const gapDays = Math.round((new Date(oldest).getTime() - new Date(sinceIso).getTime()) / (24 * 60 * 60 * 1000));
-        console.warn(
-          `[sync] ${source}: donnees demandees depuis ${sinceIso}, mais le plus ancien enregistrement recu date de ` +
-          `${oldest} (${gapDays} jours plus tard). Si cet ecart est inattendu, verifie les droits d'acces a ` +
-          `l'historique cote fournisseur (ex: scope Shopify "read_all_orders" - sans lui, l'API ne renvoie que les ` +
-          `commandes des ~60 derniers jours, meme si created_at_min demande plus loin dans le passe).`
-        );
-      }
+    if (!currentlyMock && oldest && new Date(oldest).getTime() - new Date(sinceIso).getTime() > HISTORY_GAP_WARNING_MS) {
+      const gapDays = Math.round((new Date(oldest).getTime() - new Date(sinceIso).getTime()) / (24 * 60 * 60 * 1000));
+      console.warn(
+        `[sync] ${source}: donnees demandees depuis ${sinceIso}, mais le plus ancien enregistrement recu date de ` +
+        `${oldest} (${gapDays} jours plus tard). Si cet ecart est inattendu, verifie les droits d'acces a ` +
+        `l'historique cote fournisseur (ex: scope Shopify "read_all_orders" - sans lui, l'API ne renvoie que les ` +
+        `commandes des ~60 derniers jours, meme si created_at_min demande plus loin dans le passe).`
+      );
     }
 
     db.setSourceMeta(source, {
@@ -93,6 +132,7 @@ async function syncSource({ source, fetchSales, initialSyncDays, isMock }) {
       requestedSinceIso: sinceIso,
       oldestRecordDate: oldest,
       newestRecordDate: newest,
+      lastKnownMock: currentlyMock,
       ...result,
     });
     return { source, ok: true, ...result };
@@ -105,11 +145,24 @@ async function syncSource({ source, fetchSales, initialSyncDays, isMock }) {
   }
 }
 
-async function syncAll() {
+// `opts.onlySources`: limite la sync a ces sources seulement (ex: reset
+// cible d'une seule source, pour ne pas faire echouer/attendre sur
+// l'autre source si elle est lente ou bloquee - voir /api/admin/reset-sync).
+// `opts.forceFullResyncSources` / `opts.forceReplaceSources`: memes
+// semantiques que sur syncSource, par source.
+async function syncAll(opts = {}) {
+  const { onlySources, forceFullResyncSources, forceReplaceSources } = opts;
+  const connectors = onlySources ? CONNECTORS.filter((c) => onlySources.includes(c.source)) : CONNECTORS;
   const results = [];
-  for (const connector of CONNECTORS) {
+  for (const connector of connectors) {
     // Sequentiel: petit volume attendu, evite de bombarder deux API en parallele.
-    results.push(await syncSource(connector));
+    results.push(
+      await syncSource({
+        ...connector,
+        forceFullResync: Boolean(forceFullResyncSources && forceFullResyncSources.includes(connector.source)),
+        forceReplace: Boolean(forceReplaceSources && forceReplaceSources.includes(connector.source)),
+      })
+    );
   }
   return results;
 }
