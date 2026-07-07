@@ -70,9 +70,15 @@ body {
 
 /* ---------- Sidebar ---------- */
 
+/* La colonne de gauche reste toujours en bleu Proludik (--brand-navy),
+   peu importe le thème clair/sombre choisi pour le reste du dashboard -
+   couleurs codées en dur ici plutôt que via les variables --bg-sidebar /
+   --text-* qui, elles, changent avec le thème. Le logo (blanc/rouge,
+   pensé pour un fond foncé) reste donc lui aussi fixe - voir
+   initBrandLogo() dans dashboard.js. */
 .sidebar {
-  background: var(--bg-sidebar);
-  border-right: 1px solid var(--border);
+  background: var(--brand-navy);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   padding: 20px 14px;
   display: flex;
   flex-direction: column;
@@ -88,24 +94,24 @@ body {
   display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 16px;
 }
-.brand-fallback-text { font-weight: 800; letter-spacing: 0.5px; font-size: 16px; }
+.brand-fallback-text { font-weight: 800; letter-spacing: 0.5px; font-size: 16px; color: #fff; }
 
 .nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .nav-item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; border-radius: 8px;
   font-weight: 600; font-size: 13px; letter-spacing: 0.3px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.68);
 }
 .nav-item.is-active { background: var(--brand-red); color: #fff; }
-.nav-item.is-disabled { color: var(--text-muted); cursor: default; }
+.nav-item.is-disabled { color: rgba(255, 255, 255, 0.32); cursor: default; }
 .nav-icon { width: 18px; height: 18px; flex: none; display: flex; }
 .nav-icon svg { width: 100%; height: 100%; }
 
-.sidebar-footer { border-top: 1px solid var(--border); padding-top: 14px; }
-.sidebar-tagline { margin: 0; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; }
+.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.14); padding-top: 14px; }
+.sidebar-tagline { margin: 0; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; color: #fff; }
 .sidebar-tagline .accent { color: var(--brand-red); }
-.sidebar-subtagline { margin: 6px 0 0; font-size: 10px; color: var(--text-muted); line-height: 1.5; letter-spacing: 0.3px; }
+.sidebar-subtagline { margin: 6px 0 0; font-size: 10px; color: rgba(255, 255, 255, 0.55); line-height: 1.5; letter-spacing: 0.3px; }
 
 /* ---------- Header ---------- */
 
@@ -229,6 +235,13 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .sparkline { display: flex; align-items: flex-end; gap: 2px; height: 34px; }
 .sparkline .bar { flex: 1; background: var(--brand-red); border-radius: 3px 3px 0 0; min-height: 2px; opacity: 0.85; }
 .sparkline .bar:last-child { opacity: 1; }
+.sparkline .bar.is-current { opacity: 1; }
+
+/* Numeros de semaine / mois affiches sous les cartes "Ce mois" et "Année
+   financière" (voir getTrend cote serveur). */
+.sparkline-labels { display: flex; gap: 2px; margin-top: 2px; }
+.sparkline-labels span { flex: 1; text-align: center; font-size: 9px; color: var(--text-muted); white-space: nowrap; }
+.sparkline-labels span.is-current { color: var(--brand-red); font-weight: 700; }
 
 .goal-progress-track { height: 10px; border-radius: 5px; background: var(--track); overflow: hidden; }
 .goal-progress-fill { height: 100%; border-radius: 5px; background: var(--brand-red); }
@@ -262,6 +275,15 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .counter-title .nav-icon { width: 16px; height: 16px; color: var(--brand-red); }
 .counter-value { font-size: 24px; font-weight: 800; }
 .counter-compare { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+
+/* Palier vert/jaune/rouge (>=100% / 75-99% / <75%) - reutilise sur les 4
+   cartes compteurs et sur le Score des representants (voir tierClass()
+   dans dashboard.js). */
+.status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: auto; flex: none; }
+.status-dot.good { background: var(--good); }
+.status-dot.warn { background: var(--warning); }
+.status-dot.bad { background: var(--bad); }
+.status-dot.neutral { background: var(--text-muted); }
 
 /* ---------- Content grid: table + side col ---------- */
 
@@ -304,8 +326,11 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .rep-table .num-cell { font-variant-numeric: tabular-nums; }
 .progress-cell { min-width: 100px; }
 .mini-progress-track { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-bottom: 4px; }
-.mini-progress-fill { height: 100%; border-radius: 3px; background: var(--brand-red); }
+.mini-progress-fill { height: 100%; border-radius: 3px; background: var(--bad); }
 .mini-progress-fill.good { background: var(--good); }
+.mini-progress-fill.warn { background: var(--warning); }
+.mini-progress-fill.bad { background: var(--bad); }
+.mini-progress-fill.neutral { background: var(--text-muted); }
 .progress-pct { font-size: 11px; color: var(--text-secondary); }
 
 .score-ring {
