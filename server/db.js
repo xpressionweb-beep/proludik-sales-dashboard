@@ -85,10 +85,25 @@ function setSourceMeta(source, patch) {
   return meta;
 }
 
+// Efface la meta d'une source (dont lastSuccessAt) pour forcer une
+// resynchronisation complete: sans lastSuccessAt, sinceIsoFor() (voir
+// services/sync.js) retombe sur initialSyncDays au prochain cycle plutot
+// que de repartir de la derniere sync incrementale. Les enregistrements
+// deja stockes (data/sales.json) ne sont pas touches - le prochain sync
+// les mettra a jour par upsert (meme externalId), sans doublons.
+function resetSourceMeta(source) {
+  const meta = getMeta();
+  meta.sources = meta.sources || {};
+  delete meta.sources[source];
+  writeJsonAtomic(META_FILE, meta);
+  return meta;
+}
+
 module.exports = {
   getAllSales,
   upsertSales,
   replaceSourceSales,
   getMeta,
   setSourceMeta,
+  resetSourceMeta,
 };

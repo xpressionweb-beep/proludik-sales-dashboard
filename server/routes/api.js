@@ -88,6 +88,30 @@ router.post('/sync', async (req, res) => {
   res.json({ ok: true, meta: db.getMeta(), queued });
 });
 
+// Sources de donnees connues - doit rester en phase avec shopify.SOURCE /
+// inflatableOffice.SOURCE (voir server/connectors/*.js).
+const VALID_SYNC_SOURCES = ['shopify', 'io'];
+
+// Force une resynchronisation complete d'une source (ex: apres correction
+// d'un probleme d'acces cote fournisseur - scope Shopify read_all_orders
+// approuve apres coup, par exemple). Deja protege par l'auth Basic
+// globale (voir server/index.js) quand DASHBOARD_USER/PASSWORD sont
+// configures. N'efface pas les ventes deja stockees: le prochain sync les
+// met a jour par upsert (meme externalId) plutot que de les dupliquer -
+// voir db.resetSourceMeta().
+router.post('/admin/reset-sync', async (req, res) => {
+  const source = req.query.source || (req.body && req.body.source);
+  if (!VALID_SYNC_SOURCES.includes(source)) {
+    return res.status(400).json({ error: `source doit etre l'un de: ${VALID_SYNC_SOURCES.join(', ')}.` });
+  }
+
+  db.resetSourceMeta(source);
+  console.log(`[api] Reset de sync demande pour "${source}" - le prochain cycle repartira depuis initialSyncDays.`);
+  const { queued } = await triggerSyncQuick(`reset-sync:${source}`);
+
+  res.json({ ok: true, source, meta: db.getMeta(), queued });
+});
+
 // Diagnostic: IP sortante du serveur, a fournir a un fournisseur (ex.
 // rental.software) en cas de blocage par IP. Loggee aussi au demarrage.
 router.get('/diagnostics/ip', async (req, res) => {
