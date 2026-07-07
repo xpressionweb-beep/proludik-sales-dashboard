@@ -41,16 +41,16 @@ function renderStaticIcons() {
 
 // ---------- Theme clair/sombre ----------
 // Meme structure et memes donnees dans les deux themes - seules les
-// couleurs (variables CSS) et le logo changent. Prefere localStorage a
+// couleurs (variables CSS) changent. Prefere localStorage a
 // prefers-color-scheme: c'est un choix explicite de l'utilisateur via le
 // bouton, pas un suivi automatique du systeme.
 const THEME_STORAGE_KEY = 'proludik-theme';
-const THEME_LOGO_PATHS = {
-  dark: 'assets/proludik_h_rouge_blanc.png',
-  light: 'assets/proludik_h_rouge_navy.png',
-};
+// La colonne de gauche (sidebar) reste toujours bleu Proludik (voir
+// styles.css), donc le logo utilise reste lui aussi fixe (le logo "initial",
+// blanc/rouge, pense pour un fond fonce) - il ne bascule plus avec le theme.
+const BRAND_LOGO_PATH = 'assets/proludik_h_rouge_blanc.png';
 
-function applyLogoForTheme(theme) {
+function initBrandLogo() {
   const img = document.getElementById('brandLogo');
   const fallback = document.getElementById('brandFallback');
   img.style.display = '';
@@ -59,14 +59,13 @@ function applyLogoForTheme(theme) {
     img.style.display = 'none';
     fallback.style.display = 'flex';
   };
-  img.src = THEME_LOGO_PATHS[theme];
+  img.src = BRAND_LOGO_PATH;
 }
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   const toggleIcon = document.querySelector('#themeToggle .nav-icon');
   if (toggleIcon) toggleIcon.innerHTML = iconSvg(theme === 'dark' ? 'sun' : 'moon');
-  applyLogoForTheme(theme);
   localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 
@@ -108,11 +107,44 @@ function deltaBadgeHtml(changePct) {
   return `<span class="delta-badge ${cls}"><span class="nav-icon" style="width:12px;height:12px">${iconSvg(icon)}</span>${pctFmt(changePct)}</span>`;
 }
 
-function sparklineHtml(points) {
+// ---------- Paliers de couleur (vert/jaune/rouge) ----------
+// Reutilise partout ou une valeur se compare a un seuil de 100%: score des
+// representants, cartes compteurs (ratio vs periode precedente), etc.
+// vert >= 100%, jaune 75-99%, rouge < 75%, gris si aucune comparaison
+// possible (pas de donnee de reference).
+function tierClass(pct) {
+  if (pct === null || pct === undefined || Number.isNaN(pct)) return 'neutral';
+  if (pct >= 100) return 'good';
+  if (pct >= 75) return 'warn';
+  return 'bad';
+}
+
+function tierColorVar(tier) {
+  return { good: 'var(--good)', warn: 'var(--warning)', bad: 'var(--bad)', neutral: 'var(--text-muted)' }[tier];
+}
+
+function tierDotHtml(tier) {
+  const title = { good: 'Objectif atteint', warn: 'Proche de l\'objectif', bad: 'En dessous de l\'objectif', neutral: 'Pas encore de comparaison' }[tier];
+  return `<span class="status-dot ${tier}" title="${title}"></span>`;
+}
+
+// Ratio "periode courante / periode precedente" en %, utilise pour colorer
+// les cartes Confirmes/Soumissions/VRF-Contrats (100% = au moins autant que
+// la periode precedente).
+function ratioPct(current, previous) {
+  if (previous > 0) return (current / previous) * 100;
+  return current > 0 ? 100 : null;
+}
+
+function sparklineHtml(points, { showLabels = false } = {}) {
   const max = Math.max(1, ...points.map((p) => p.amount));
-  return `<div class="sparkline">${points
-    .map((p) => `<div class="bar" style="height:${Math.max(4, (p.amount / max) * 100)}%" title="${p.label}: ${money.format(p.amount)}"></div>`)
-    .join('')}</div>`;
+  const bars = points
+    .map((p) => `<div class="bar${p.current ? ' is-current' : ''}" style="height:${Math.max(4, (p.amount / max) * 100)}%" title="${p.label}: ${money.format(p.amount)}"></div>`)
+    .join('');
+  const labels = showLabels
+    ? `<div class="sparkline-labels">${points.map((p) => `<span class="${p.current ? 'is-current' : ''}">${p.label}</span>`).join('')}</div>`
+    : '';
+  return `<div class="sparkline">${bars}</div>${labels}`;
 }
 
 // ---------- Bandeau de metriques rapides ----------
@@ -156,7 +188,7 @@ async function renderBigCards() {
     fetchJson('/api/trend?card=year'),
   ]);
 
-  const yoyCard = (title, icon, data, trend) => {
+  const yoyCard = (title, icon, data, trend, showLabels) => {
     return `
     <div class="big-card">
       <div class="big-card-title">${iconSvg(icon) ? `<span class="nav-icon">${iconSvg(icon)}</span>` : ''}${title}</div>
@@ -165,7 +197,7 @@ async function renderBigCards() {
         <span class="compare-years">vs même période l'an dernier : <strong>${money.format(data.previousYear.totals.grandTotal)}</strong></span>
         ${deltaBadgeHtml(data.changePct)}
       </div>
-      ${sparklineHtml(trend)}
+      ${sparklineHtml(trend, { showLabels })}
     </div>`;
   };
 
@@ -191,9 +223,14 @@ async function renderBigCards() {
     </div>`;
 
   document.getElementById('bigCards').innerHTML =
-    yoyCard('Cette semaine', 'chart', yoy.week, trendWeek) +
-    yoyCard('Ce mois', 'calendar', yoy.month, trendMonth) +
-    yoyCard('Année financière', 'dollar', yoy.year, trendYear) +
+    yoyCard('Cette semaine', 'chart', yoy.week, trendWeek, false) +
+    // "Ce mois": 5 semaines (2 precedentes, en cours, 2 suivantes) -
+    // numeros de semaine affiches sous le graphique (voir getTrend cote
+    // serveur pour le detail des semaines calendaires retenues).
+    yoyCard('Ce mois', 'calendar', yoy.month, trendMonth, true) +
+    // "Année financière": 13 mois civils (6 precedents, en cours, 6
+    // suivants) affiches sous le graphique.
+    yoyCard('Année financière', 'dollar', yoy.year, trendYear, true) +
     objectiveCard;
 }
 
@@ -218,9 +255,14 @@ async function renderCounters() {
   const statusCards = defs
     .map(({ key, label, icon }) => {
       const s = counts7d.statuses[key];
+      // Palier vert/jaune/rouge base sur le ratio "7 derniers jours / 7
+      // jours precedents" (100% = au moins autant que la periode
+      // precedente) - pas de comparaison possible (gris) si les deux
+      // periodes sont a 0.
+      const tier = tierClass(ratioPct(s.current, s.previous));
       return `
         <div class="counter-card">
-          <div class="counter-title"><span class="nav-icon">${iconSvg(icon)}</span>${label}</div>
+          <div class="counter-title"><span class="nav-icon">${iconSvg(icon)}</span>${label}${tierDotHtml(tier)}</div>
           <div class="counter-value">${num.format(s.current)}</div>
           <div class="counter-compare">vs ${num.format(s.previous)} (7 jours précédents) ${deltaBadgeHtml(s.changePct)}</div>
         </div>`;
@@ -228,9 +270,10 @@ async function renderCounters() {
     .join('');
 
   const avg = conversionSummary.average;
+  const conversionTier = tierClass(avg);
   const conversionCard = `
     <div class="counter-card">
-      <div class="counter-title"><span class="nav-icon">${iconSvg('trendUp')}</span>Conversion moyenne</div>
+      <div class="counter-title"><span class="nav-icon">${iconSvg('trendUp')}</span>Conversion moyenne${tierDotHtml(conversionTier)}</div>
       <div class="counter-value">${avg !== null ? avg.toFixed(0) + '%' : '—'}</div>
       <div class="counter-compare">Moyenne de ${conversionSummary.repCount} représentants (année financière)</div>
     </div>`;
@@ -241,19 +284,19 @@ async function renderCounters() {
 // ---------- Tableau de performance des representants ----------
 function scoreRingHtml(pct) {
   const clamped = pct === null ? 0 : Math.min(100, Math.max(0, pct));
-  const color = pct !== null && pct >= 100 ? 'var(--good)' : 'var(--brand-red)';
+  const tier = tierClass(pct);
   const deg = clamped * 3.6;
   return `
-    <div class="score-ring" style="background: conic-gradient(${color} ${deg}deg, var(--track) 0)">
+    <div class="score-ring" style="background: conic-gradient(${tierColorVar(tier)} ${deg}deg, var(--track) 0)">
       <div class="score-ring-inner">${pct !== null ? Math.round(pct) : '—'}</div>
     </div>`;
 }
 
 function progressCellHtml(pct) {
   const clamped = pct === null ? 0 : Math.min(100, Math.max(2, pct));
-  const cls = pct !== null && pct >= 100 ? 'good' : '';
+  const tier = tierClass(pct);
   return `
-    <div class="mini-progress-track"><div class="mini-progress-fill ${cls}" style="width:${clamped}%"></div></div>
+    <div class="mini-progress-track"><div class="mini-progress-fill ${tier}" style="width:${clamped}%"></div></div>
     <div class="progress-pct">${pct !== null ? pct.toFixed(0) + '%' : '—'}</div>`;
 }
 
@@ -516,6 +559,7 @@ document.getElementById('themeToggle').addEventListener('click', () => {
 
 renderStaticIcons();
 initTheme();
+initBrandLogo();
 updateClock();
 setInterval(updateClock, 1000);
 initIoModeToggle().catch((err) => console.error('Impossible de charger le mode IO (Réel/Démo):', err));

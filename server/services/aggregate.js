@@ -251,10 +251,25 @@ function getGlobalObjective(referenceDate = new Date()) {
   return { fiscalYear: fyLabel, amount, target, pct };
 }
 
+// Numero de semaine ISO 8601 (1-53) de la semaine calendaire contenant `date`.
+function isoWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7; // dimanche (0) -> 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
 // Serie de points reels pour la mini-sparkline de chaque grande carte:
-// - "day"/"week": un point par jour de la semaine en cours (jusqu'a aujourd'hui)
-// - "month": un point par jour du mois en cours (jusqu'a aujourd'hui)
-// - "year": un point par mois de l'annee financiere en cours (jusqu'au mois en cours)
+// - "week": un point par jour de la semaine en cours (jusqu'a aujourd'hui)
+// - "month": 5 semaines calendaires (lundi-dimanche) centrees sur la
+//   semaine en cours - 2 precedentes, celle en cours, 2 suivantes -
+//   plutot que les seuls jours ecoules du mois civil. Les semaines
+//   futures peuvent avoir un total a 0 (aucune vente inventee).
+// - "year": 13 mois civils centres sur le mois en cours - 6 precedents,
+//   celui en cours, 6 suivants - plutot que les seuls mois ecoules de
+//   l'annee financiere (peut donc deborder sur l'annee financiere
+//   adjacente aux deux bouts).
 // Aucune donnee inventee: chaque point vient de computeTotals() sur les
 // vraies ventes stockees.
 function getTrend(cardType, referenceDate = new Date()) {
@@ -270,19 +285,22 @@ function getTrend(cardType, referenceDate = new Date()) {
       points.push({ label: d.toLocaleDateString('fr-CA', { weekday: 'short' }), amount: computeTotals(sales, d, dayEnd).grandTotal });
     }
   } else if (cardType === 'month') {
-    const { start } = getBounds('month', 0, referenceDate);
-    const today = new Date(referenceDate);
-    today.setHours(0, 0, 0, 0);
-    for (let d = new Date(start); d <= today; d = addDays(d, 1)) {
-      const dayEnd = addDays(d, 1);
-      points.push({ label: String(d.getDate()), amount: computeTotals(sales, d, dayEnd).grandTotal });
+    for (let offset = -2; offset <= 2; offset += 1) {
+      const { start, end } = getBounds('week', offset, referenceDate);
+      points.push({
+        label: `S${isoWeekNumber(start)}`,
+        amount: computeTotals(sales, start, end).grandTotal,
+        current: offset === 0,
+      });
     }
   } else if (cardType === 'year') {
-    const { start } = getBounds('year', 0, referenceDate);
-    const ref = new Date(referenceDate);
-    for (let m = new Date(start); m <= ref; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
-      const monthEnd = new Date(m.getFullYear(), m.getMonth() + 1, 1);
-      points.push({ label: m.toLocaleDateString('fr-CA', { month: 'short' }), amount: computeTotals(sales, m, monthEnd).grandTotal });
+    for (let offset = -6; offset <= 6; offset += 1) {
+      const { start, end } = getBounds('month', offset, referenceDate);
+      points.push({
+        label: start.toLocaleDateString('fr-CA', { month: 'short', year: '2-digit' }),
+        amount: computeTotals(sales, start, end).grandTotal,
+        current: offset === 0,
+      });
     }
   } else {
     throw new Error(`Type de tendance inconnu: ${cardType}`);

@@ -376,9 +376,43 @@ disponible pour d'éventuels futurs besoins).
 ## Sparklines (mini-graphiques des grandes cartes)
 
 `getTrend(cardType)` (`/api/trend?card=week|month|year`) découpe la
-période de chaque carte en sous-unités réelles (jour par jour pour
-semaine/mois, mois par mois pour l'année financière), à partir des vraies
-ventes stockées — aucune donnée simulée.
+période de chaque carte en sous-unités réelles, à partir des vraies ventes
+stockées — aucune donnée simulée :
+
+- **Cette semaine** : un point par jour de la semaine calendaire en cours
+  (jusqu'à aujourd'hui).
+- **Ce mois** : 5 semaines calendaires (lundi-dimanche) — les 2
+  précédentes, la semaine en cours, et les 2 suivantes — avec le numéro de
+  semaine ISO 8601 (`isoWeekNumber()`) affiché sous chaque barre. La
+  semaine en cours est mise en évidence (`current: true`).
+- **Année financière** : 13 mois civils — les 6 précédents, le mois en
+  cours, et les 6 suivants — avec le mois affiché sous chaque barre. Peut
+  donc déborder sur l'année financière adjacente aux deux bouts. Le mois
+  en cours est mis en évidence.
+
+Les semaines/mois futurs peuvent afficher 0 $ (aucune vente n'existe
+encore pour cette période) — c'est honnête, pas un bug.
+
+### Paliers de couleur (score, cartes compteurs)
+
+Les 4 cartes compteurs (Confirmés/Soumissions/VRF-Contrats/Conversion
+moyenne) affichent un point de couleur, et la colonne "Score" du tableau
+des représentants (ainsi que sa barre de progression) est colorée selon
+le même seuil : **vert** ≥ 100 %, **jaune** 75-99 %, **rouge** < 75 %,
+**gris** si aucune comparaison n'est possible. Pour les 3 cartes de
+statut, le pourcentage comparé est le ratio "7 derniers jours / 7 jours
+précédents" (100 % = au moins autant que la période précédente) ; pour
+"Conversion moyenne" et pour le Score, c'est directement le pourcentage
+affiché. Voir `tierClass()` dans `public/dashboard.js`.
+
+## Colonne de gauche (sidebar) et logo
+
+La sidebar reste **toujours** en bleu Proludik (`--brand-navy`), peu
+importe le thème clair/sombre choisi pour le reste du dashboard — ses
+couleurs sont codées en dur dans `styles.css` plutôt que liées aux
+variables de thème. Le logo utilisé (`assets/proludik_h_rouge_blanc.png`,
+blanc/rouge, pensé pour un fond foncé) est donc lui aussi fixe et ne
+bascule plus avec le thème (voir `initBrandLogo()` dans `dashboard.js`).
 
 ## Activité récente
 
