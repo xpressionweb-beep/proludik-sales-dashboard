@@ -140,7 +140,12 @@ router.post('/admin/reset-sync', async (req, res) => {
 // reponse ci-dessous, le scope reellement accorde par Shopify (ex: confirmer
 // si read_all_orders est bien pris en compte apres une modif du Dev
 // Dashboard, sans attendre l'expiration naturelle du cache ~24h).
-router.post('/diagnostics/shopify-token-refresh', async (req, res) => {
+// Accepte GET et POST temporairement pour permettre un test rapide en
+// collant simplement l'URL dans un navigateur (sans Postman/curl).
+router.all('/diagnostics/shopify-token-refresh', async (req, res) => {
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: 'Methode non supportee (GET ou POST uniquement).' });
+  }
   if (config.shopify.accessToken) {
     return res.status(400).json({ error: 'App configuree avec un token statique (pas de flux OAuth a rafraichir).' });
   }
