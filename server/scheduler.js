@@ -12,11 +12,11 @@ const { syncAll } = require('./services/sync');
 let busy = false;
 let queue = Promise.resolve();
 
-async function doSync(trigger) {
+async function doSync(trigger, opts) {
   busy = true;
   console.log(`[sync] demarrage (${trigger})`);
   try {
-    const results = await syncAll();
+    const results = await syncAll(opts);
     for (const r of results) {
       if (r.ok) {
         console.log(`[sync] ${r.source}: ok (${r.inserted} nouveaux, ${r.updated} mis a jour)`);
@@ -30,14 +30,18 @@ async function doSync(trigger) {
   }
 }
 
-function runSync(trigger) {
+// `opts` (optionnel): transmis tel quel a syncAll() - voir services/sync.js
+// (onlySources / forceFullResyncSources / forceReplaceSources), utilise par
+// POST /api/admin/reset-sync pour cibler et forcer une resync complete
+// d'une seule source sans toucher a l'autre.
+function runSync(trigger, opts) {
   if (busy) {
     console.log(`[sync] "${trigger}" mis en file d'attente (une sync est deja en cours) - se declenchera automatiquement a la suite.`);
   }
 
   const scheduled = queue.then(
-    () => doSync(trigger),
-    () => doSync(trigger) // la sync precedente a echoue: on demarre quand meme celle-ci
+    () => doSync(trigger, opts),
+    () => doSync(trigger, opts) // la sync precedente a echoue: on demarre quand meme celle-ci
   );
   // Ne jamais laisser une rejection casser le chainage pour les appels suivants;
   // l'appelant de runSync() recoit lui, sans transformation, `scheduled` (qui peut
