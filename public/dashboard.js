@@ -552,6 +552,33 @@ document.getElementById('syncNowBtn').addEventListener('click', async (e) => {
   }
 });
 
+// Force une resynchronisation complete Shopify (efface la derniere sync
+// cote serveur pour repartir de SHOPIFY_INITIAL_SYNC_DAYS - voir POST
+// /api/admin/reset-sync dans server/routes/api.js). Confirmation demandee
+// car c'est une action plus lourde qu'un sync normal (re-fetch tout
+// l'historique), pas juste les nouvelles commandes.
+document.getElementById('resetShopifySyncBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const confirmed = window.confirm(
+    'Resynchroniser Shopify depuis le début (tout l\'historique, pas juste les nouvelles commandes) ? Ça peut prendre plus de temps qu\'un sync normal.'
+  );
+  if (!confirmed) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Resynchronisation…';
+  try {
+    const result = await fetchJson('/api/admin/reset-sync?source=shopify', { method: 'POST' });
+    if (result.queued) showQueuedNotice();
+    await loadAll();
+  } catch (err) {
+    console.error(err);
+    window.alert(`Échec de la resynchronisation Shopify: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Resynchroniser Shopify (complet)';
+  }
+});
+
 document.getElementById('themeToggle').addEventListener('click', () => {
   const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   applyTheme(current === 'light' ? 'dark' : 'light');

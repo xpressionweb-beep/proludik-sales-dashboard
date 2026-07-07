@@ -573,7 +573,10 @@ config/
   `read_all_orders` approuvé après coup — voir la section `/api/meta`
   ci-dessus). Ne supprime **pas** les ventes déjà stockées : le prochain
   sync les met à jour par upsert (même `externalId`), sans doublons.
-  Protégé par la même auth Basic que le reste du dashboard.
+  Protégé par la même auth Basic que le reste du dashboard. Accessible
+  depuis le dashboard via le bouton "Resynchroniser Shopify (complet)"
+  dans le pied de page, à côté de "Synchroniser maintenant" (demande une
+  confirmation avant de l'appeler, car c'est une opération plus lourde).
 - `GET /api/diagnostics/ip` — IP sortante du serveur (voir section
   "Diagnostic : IP sortante du serveur").
 - `GET /api/settings/io-mode` — mode IO effectif actuel (`{ "mode":
