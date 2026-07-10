@@ -79,4 +79,134 @@
     padding: 8px 14px;
     font-size: 13px;
     cursor: pointer;
-    color:
+    color: var(--navy);
+  }
+  .quick-btn:hover { background: #e2e5ec; }
+  .send-btn {
+    width: 100%;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+  .send-btn:hover { opacity: 0.9; }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+    display: none;
+  }
+  .status.success { background: #e6f7ec; color: #1a7a3d; display: block; }
+  .status.error { background: #fdeaea; color: var(--red); display: block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h1>📦 Aviser l'entrepôt</h1>
+    <p>Envoie une notif instantanée sur le iPhone</p>
+  </div>
+  <div class="body">
+
+    <label for="recipient">Destinataire</label>
+    <select id="recipient"></select>
+
+    <label for="message">Message</label>
+    <textarea id="message" placeholder="Ex: Client pour dossier #1234 est arrivé"></textarea>
+
+    <div class="quick-buttons" id="quickButtons"></div>
+
+    <button class="send-btn" id="sendBtn" onclick="sendNotif()">Envoyer</button>
+
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = window.location.origin;
+
+  const quickMessages = [
+    "Client arrivé pour son dossier",
+    "Livraison à préparer",
+    "Peux-tu m'appeler?",
+    "Retour de matériel à traiter"
+  ];
+
+  async function loadRecipients() {
+    const select = document.getElementById('recipient');
+    try {
+      const res = await fetch(`${API_BASE}/api/notify/recipients`);
+      const list = await res.json();
+      select.innerHTML = list.map(r => `<option value="${r.id}">${r.label}</option>`).join('');
+    } catch (e) {
+      select.innerHTML = `<option value="">Erreur de chargement</option>`;
+    }
+  }
+
+  function renderQuickButtons() {
+    const container = document.getElementById('quickButtons');
+    container.innerHTML = quickMessages.map(msg =>
+      `<button type="button" class="quick-btn" onclick="setMessage('${msg.replace(/'/g, "\\'")}')">${msg}</button>`
+    ).join('');
+  }
+
+  function setMessage(text) {
+    document.getElementById('message').value = text;
+  }
+
+  async function sendNotif() {
+    const recipient = document.getElementById('recipient').value;
+    const message = document.getElementById('message').value.trim();
+    const btn = document.getElementById('sendBtn');
+    const status = document.getElementById('status');
+
+    if (!message) {
+      status.className = 'status error';
+      status.textContent = 'Écris un message avant d\'envoyer.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Envoi...';
+    status.className = 'status';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient, message })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        status.className = 'status success';
+        status.textContent = '✅ Message envoyé!';
+        document.getElementById('message').value = '';
+      } else {
+        status.className = 'status error';
+        status.textContent = '❌ ' + (data.error || 'Erreur inconnue');
+      }
+    } catch (e) {
+      status.className = 'status error';
+      status.textContent = '❌ Impossible de contacter le serveur';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Envoyer';
+    }
+  }
+
+  loadRecipients();
+  renderQuickButtons();
+</script>
+
+</body>
+</html>
