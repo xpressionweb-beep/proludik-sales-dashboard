@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proludik - Aviser l'entrepôt</title>
+<style>
+  :root {
+    --navy: #1a2744;
+    --red: #c8102e;
+    --bg: #f4f5f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Barlow', Arial, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .card {
+    background: white;
+    max-width: 480px;
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .header {
+    background: var(--navy);
+    color: white;
+    padding: 20px 24px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    opacity: 0.8;
+  }
+  .body {
+    padding: 24px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  label:first-child { margin-top: 0; }
+  select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+  .quick-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .quick-btn {
+    background: #eef0f4;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color:
