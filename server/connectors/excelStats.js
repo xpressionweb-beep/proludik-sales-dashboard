@@ -114,7 +114,15 @@ function buildRecords(rows, { sinceIso } = {}) {
     // de secours base sur client+date pour rester stable d'une sync a l'autre.
     const externalId = String(row['No Contrat'] || `${row['Client'] || 'client'}-${orderDate}`);
 
+    const status = mapIoStatus(row['Statut simplifié']);
+
     if (SHOPIFY_REPS.has(repRaw)) {
+      // BUG corrigé: avant, TOUTES les lignes Boutique/Web étaient comptées
+      // (y compris Soumission/Refusé), contrairement aux lignes des
+      // représentants qui passaient déjà par mapIoStatus. Ça gonflait le
+      // total Shopify d'environ 38 000 $ (soumissions Shopify non fermées
+      // comptées comme des ventes). Même filtre appliqué ici désormais.
+      if (status === null) continue;
       shopify.push({
         source: SHOPIFY_SOURCE,
         externalId,
@@ -127,7 +135,6 @@ function buildRecords(rows, { sinceIso } = {}) {
       continue;
     }
 
-    const status = mapIoStatus(row['Statut simplifié']);
     if (status === null) continue; // Refusé / statut inconnu -> pas une vente
 
     io.push({
