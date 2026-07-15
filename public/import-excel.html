@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proludik - Import Excel</title>
+<style>
+  :root {
+    --navy: #1a2744;
+    --red: #c8102e;
+    --bg: #f4f5f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Barlow', Arial, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .card {
+    background: white;
+    max-width: 480px;
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .header {
+    background: var(--navy);
+    color: white;
+    padding: 20px 24px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    opacity: 0.8;
+  }
+  .body {
+    padding: 24px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+  .dropzone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    color: #666;
+    font-size: 14px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--red);
+    background: #fdf3f4;
+  }
+  .dropzone.has-file {
+    border-color: #1a7a3d;
+    background: #f2faf5;
+    color: #1a7a3d;
+    font-weight: 600;
+  }
+  input[type="file"] { display: none; }
+  .send-btn {
+    width: 100%;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+  .send-btn:hover { opacity: 0.9; }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+    display: none;
+    white-space: pre-line;
+  }
+  .status.success { background: #e6f7ec; color: #1a7a3d; display: block; }
+  .status.error { background: #fdeaea; color: var(--red); display: block; }
+  .status.loading { background: #eef0f4; color: var(--navy); display: block; }
+  .last-import {
+    margin-top: 18px;
+    font-size: 12px;
+    color: #888;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <img src="/logo.png" alt="Proludik" style="height: 40px; margin-bottom: 8px;">
+    <h1>Import du fichier de stats</h1>
+    <p>Mise à jour hebdomadaire du dashboard</p>
+  </div>
+  <div class="body">
+
+    <label>Fichier Excel (onglet "IO + Shopify")</label>
+    <div class="dropzone" id="dropzone">
+      Clique ici ou glisse le fichier .xlsx
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx">
+
+    <button class="send-btn" id="sendBtn" onclick="uploadFile()" disabled>Importer</button>
+
+    <div class="status" id="status"></div>
+    <div class="last-import" id="lastImport"></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = window.location.origin;
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const statusEl = document.getElementById('status');
+  const lastImportEl = document.getElementById('lastImport');
+  let selectedFile = null;
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) setFile(fileInput.files[0]);
+  });
+
+  function setFile(file) {
+    selectedFile = file;
+    dropzone.textContent = `📄 ${file.name}`;
+    dropzone.classList.add('has-file');
+    sendBtn.disabled = false;
+    statusEl.style.display = 'none';
+  }
+
+  async function uploadFile() {
+    if (!selectedFile) return;
+    sendBtn.disabled = true;
+    statusEl.className = 'status loading';
+    statusEl.textContent = 'Import en cours...';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/import-excel`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Erreur HTTP ${res.status}`);
+
+      statusEl.className = 'status success';
+      statusEl.textContent = `Importé: ${data.io} ventes IO, ${data.shopify} ventes Shopify.`;
+      loadLastImport();
+    } catch (e) {
+      statusEl.className = 'status error';
+      statusEl.textContent = `Échec: ${e.message}`;
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  async function loadLastImport() {
+    try {
+      const res = await fetch(`${API_BASE}/api/meta`);
+      const meta = await res.json();
+      const io = meta.sources && meta.sources.io;
+      if (io && io.lastSuccessAt) {
+        const d = new Date(io.lastSuccessAt);
+        lastImportEl.textContent = `Dernier import: ${d.toLocaleDateString('fr-CA')} à ${d.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}`;
+      }
+    } catch (e) { /* silencieux */ }
+  }
+
+  loadLastImport();
+</script>
+
+</body>
+</html>
