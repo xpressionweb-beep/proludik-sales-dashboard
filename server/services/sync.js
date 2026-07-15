@@ -2,21 +2,51 @@ const db = require('../db');
 const config = require('../config');
 const shopify = require('../connectors/shopify');
 const inflatableOffice = require('../connectors/inflatableOffice');
+const excelStats = require('../connectors/excelStats');
 
-const CONNECTORS = [
-  {
-    source: shopify.SOURCE,
-    fetchSales: shopify.fetchSales,
-    initialSyncDays: config.shopify.initialSyncDays,
-    isMock: () => !config.shopify.configured,
-  },
-  {
-    source: inflatableOffice.SOURCE,
-    fetchSales: inflatableOffice.fetchSales,
-    initialSyncDays: config.io.initialSyncDays,
-    isMock: () => !config.io.configured,
-  },
-];
+// Le fichier Excel de la collègue (onglet "IO + Shopify") contient déjà
+// les deux sources fusionnées - on remplace donc les DEUX connecteurs API
+// (bloqué côté IO, scope limité côté Shopify) par ce seul connecteur, qui
+// alimente les sources 'io' et 'shopify' séparément pour ne rien changer
+// au reste du pipeline (aggregate.js, dashboard). Les connecteurs API
+// restent dans le repo (io.js/shopify.js) au cas où on voudrait revenir
+// en arrière une fois l'accès API débloqué - il suffirait de restaurer
+// CONNECTORS ci-dessous.
+const USE_EXCEL_IMPORT = true;
+
+const CONNECTORS = USE_EXCEL_IMPORT
+  ? config.excel.configured
+    ? [
+        {
+          source: excelStats.IO_SOURCE,
+          fetchSales: excelStats.fetchIoSales,
+          initialSyncDays: config.excel.initialSyncDays,
+          isMock: () => false,
+        },
+        {
+          source: excelStats.SHOPIFY_SOURCE,
+          fetchSales: excelStats.fetchShopifySales,
+          initialSyncDays: config.excel.initialSyncDays,
+          isMock: () => false,
+        },
+      ]
+    : [] // EXCEL_SHARE_URL pas encore configuré: pas de sync auto tant que
+    // le mode manuel (upload, voir /api/admin/import-excel) est utilisé -
+    // évite des erreurs de cron répétées inutiles.
+  : [
+      {
+        source: shopify.SOURCE,
+        fetchSales: shopify.fetchSales,
+        initialSyncDays: config.shopify.initialSyncDays,
+        isMock: () => !config.shopify.configured,
+      },
+      {
+        source: inflatableOffice.SOURCE,
+        fetchSales: inflatableOffice.fetchSales,
+        initialSyncDays: config.io.initialSyncDays,
+        isMock: () => !config.io.configured,
+      },
+    ];
 
 function sinceIsoFor(source, initialSyncDays) {
   const meta = db.getMeta();
