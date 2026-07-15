@@ -115,9 +115,20 @@ function computeTotals(sales, start, end) {
   }
 
   const ioTotal = Object.values(io).reduce((s, b) => s + b.amount, 0);
-  const grandTotal = ioTotal + shopify.amount;
+  // grandTotal = chiffre d'affaires REEL (Confirmé, qui inclut déjà les
+  // dossiers "Réalisé"/payés côté import Excel - voir
+  // connectors/excelStats.js) + Shopify. On exclut volontairement
+  // Soumission/Contrat-VFR/Autre: ce sont des devis pas encore gagnés, les
+  // compter dans le total afficherait du chiffre d'affaires qui n'existe
+  // pas encore (confirmé par le client: le fichier de stats de référence
+  // ne compte que "Conclu" = Confirmé+Réalisé dans son total annuel).
+  const grandTotal = (io['Confirmé'] ? io['Confirmé'].amount : 0) + shopify.amount;
+  // Total incluant le pipeline ouvert (Soumission etc.) - conservé pour un
+  // usage futur éventuel (ex: carte "pipeline total"), pas utilisé pour
+  // l'instant dans le calcul des grandes cartes.
+  const pipelineTotal = ioTotal + shopify.amount;
 
-  return { io, ioTotal, shopify, grandTotal };
+  return { io, ioTotal, shopify, grandTotal, pipelineTotal };
 }
 
 function pctChange(current, previous) {
@@ -207,8 +218,12 @@ function getRepBreakdown(type, offset = 0, referenceDate = new Date()) {
 
   const rows = Array.from(byRep.values()).map((entry) => {
     const annualTarget = objectifs.reps && objectifs.reps[entry.rep] && objectifs.reps[entry.rep][fyLabel];
+    const confirmedAmount = entry.byStatus['Confirmé'] || 0;
     const target = annualTarget ? annualTarget / divisor : null;
-    const pct = target ? (entry.amount / target) * 100 : null;
+    // % vs objectif calculé sur le Confirmé (ferme), pas sur entry.amount
+    // (qui inclurait aussi les soumissions ouvertes - un devis pas encore
+    // gagné ne doit pas compter dans l'atteinte d'un objectif de vente).
+    const pct = target ? (confirmedAmount / target) * 100 : null;
     // Taux de conversion: part des ventes "Confirmé" dans le total du
     // representant (definition maison, pas de standard fourni par le
     // client - a ajuster si une autre formule est souhaitee).
