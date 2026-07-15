@@ -84,6 +84,51 @@ router.get('/meta', (req, res) => {
 });
 
 // Permet de forcer une synchronisation manuelle depuis le dashboard.
+const multer = require('multer');
+const excelStats = require('../connectors/excelStats');
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25 Mo, largement suffisant pour ce fichier
+});
+
+// Upload manuel hebdomadaire du fichier Excel de la collègue (remplace la
+// synchro auto IO/Shopify tant que l'accès OneDrive automatisé n'est pas
+// en place - voir server/connectors/excelStats.js). Remplace ENTIEREMENT
+// les sources 'io' et 'shopify' (pas un upsert incrémental): un upload
+// manuel represente l'etat complet et a jour du fichier, donc toute ligne
+// disparue du fichier (ex: erreur corrigee par la collegue) doit aussi
+// disparaitre du dashboard.
+router.post('/admin/import-excel', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Aucun fichier reçu (champ "file" attendu).' });
+  }
+
+  try {
+    const { io, shopify } = excelStats.parseUploadedWorkbook(req.file.buffer);
+    const resultIo = db.replaceSourceSales(excelStats.IO_SOURCE, io);
+    const resultShopify = db.replaceSourceSales(excelStats.SHOPIFY_SOURCE, shopify);
+    const now = new Date().toISOString();
+    db.setSourceMeta(excelStats.IO_SOURCE, {
+      lastSuccessAt: now,
+      lastError: null,
+      lastRecordCount: io.length,
+      ...resultIo,
+    });
+    db.setSourceMeta(excelStats.SHOPIFY_SOURCE, {
+      lastSuccessAt: now,
+      lastError: null,
+      lastRecordCount: shopify.length,
+      ...resultShopify,
+    });
+    console.log(`[api] Import Excel manuel: ${io.length} ventes IO, ${shopify.length} ventes Shopify.`);
+    res.json({ ok: true, io: io.length, shopify: shopify.length, meta: db.getMeta() });
+  } catch (err) {
+    console.error('[api] Import Excel manuel: échec -', err.message);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 router.post('/sync', async (req, res) => {
   const { queued } = await triggerSyncQuick('manual');
   res.json({ ok: true, meta: db.getMeta(), queued });
