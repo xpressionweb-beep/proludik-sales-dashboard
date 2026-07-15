@@ -73,6 +73,20 @@ module.exports = {
     },
   },
 
+  excel: {
+    // Lien de partage OneDrive/SharePoint (vue) du fichier de stats de la
+    // collègue - voir README section "Import Excel (OneDrive)" pour
+    // comment l'obtenir.
+    shareUrl: process.env.EXCEL_SHARE_URL || '',
+    // Fenêtre de première synchro assez large pour couvrir les comparatifs
+    // "vs l'an dernier" (2 ans).
+    initialSyncDays: parseInt(process.env.EXCEL_INITIAL_SYNC_DAYS, 10) || 730,
+    httpTimeoutMs: parseInt(process.env.EXCEL_HTTP_TIMEOUT_MS, 10) || 30000,
+    get configured() {
+      return Boolean(this.shareUrl);
+    },
+  },
+
   social: {
     facebook: {
       // Page Facebook: necessite un "Page Access Token" (longue duree) genere
