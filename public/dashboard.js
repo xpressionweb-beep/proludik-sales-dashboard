@@ -71,7 +71,7 @@ function applyTheme(theme) {
 
 function initTheme() {
   const saved = localStorage.getItem(THEME_STORAGE_KEY);
-  applyTheme(saved === 'light' ? 'light' : 'dark');
+  applyTheme(saved === 'dark' ? 'dark' : 'light');
 }
 
 // ---------- Horloge / date en direct ----------
@@ -618,7 +618,6 @@ async function loadAll() {
     renderDivisions(),
     renderRepTable(),
     renderMonthlySalesTable(),
-    renderSocial(),
     renderMeta(),
     renderFiscalRange(),
   ]);

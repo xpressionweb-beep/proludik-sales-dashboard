@@ -569,7 +569,7 @@ function getMonthlySalesTable(referenceDate = new Date()) {
   const { start: fyStart } = getBounds('year', 0, referenceDate);
   const fyLabel = fiscalYearLabel(fyStart);
   const prevFyLabel = fiscalYearLabel(addDays(fyStart, -1));
-  const monthlyTargets = (objectifs.monthly && objectifs.monthly[fyLabel]) || {};
+  const monthlyTargets = (objectifs.monthlyTotal && objectifs.monthlyTotal[fyLabel]) || {};
 
   const rows = [];
   for (let i = 0; i < 12; i += 1) {
