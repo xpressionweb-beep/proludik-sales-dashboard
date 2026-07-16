@@ -28,7 +28,7 @@
    données. Le rouge de marque (--brand-red) et le navy (--brand-navy)
    restent identiques dans les deux thèmes. */
 :root[data-theme="light"] {
-  --bg-page: #f6f6f8;
+  --bg-page: #e7e8ec;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
   --bg-card-alt: #f1f1f4;

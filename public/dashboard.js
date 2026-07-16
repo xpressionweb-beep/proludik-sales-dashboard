@@ -613,7 +613,6 @@ async function initIoModeToggle() {
 
 async function loadAll() {
   await Promise.all([
-    renderQuickMetrics(),
     renderBigCards(),
     renderNewDossiers(),
     renderDivisions(),
