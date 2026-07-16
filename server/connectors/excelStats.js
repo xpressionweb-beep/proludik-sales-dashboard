@@ -105,12 +105,22 @@ async function loadRows() {
 
 // "Réalisé" (facturé/payé) regroupé avec "Confirmé" - un contrat paye est
 // au moins aussi "confirmé" qu'un contrat confirmé mais pas encore réalisé,
-// et le dashboard n'a pas de 4e carte de statut. "Refusé" -> exclu: une
-// soumission refusée n'est pas une vente et ne doit pas compter dans le
-// chiffre d'affaires.
+// et le dashboard n'a pas de 4e carte de statut. "Contrat/VFR" et "Refusé"
+// sont maintenant reconnus explicitement (BUG CORRIGÉ: avant, tout statut
+// autre que Confirmé/Réalisé/Soumission tombait dans le "return null" par
+// défaut et était silencieusement exclu de l'import - "Contrat/VFR"
+// affichait donc toujours 0$ partout, et "Refusé" étant totalement absent
+// des données, le taux de conversion (Confirmé / total du représentant)
+// ne comptait aucune soumission perdue au dénominateur, le gonflant
+// artificiellement bien au-dessus de la réalité). "Refusé" n'est volontai-
+// rement PAS dans config.io.statuses: il ne compte donc dans aucune carte
+// de revenu (grandTotal, division, etc.), seulement dans le total brut du
+// représentant (entry.amount) utilisé au dénominateur du taux de conversion.
 function mapIoStatus(raw) {
   if (raw === 'Confirmé' || raw === 'Réalisé') return 'Confirmé';
   if (raw === 'Soumission') return 'Soumission';
+  if (raw === 'Contrat/VFR') return 'Contrat/VFR';
+  if (raw === 'Refusé') return 'Refusé';
   return null;
 }
 
@@ -137,12 +147,11 @@ function buildRecords(rows, { sinceIso } = {}) {
     const status = mapIoStatus(row['Statut simplifié']);
 
     if (SHOPIFY_REPS.has(repRaw)) {
-      // BUG corrigé: avant, TOUTES les lignes Boutique/Web étaient comptées
-      // (y compris Soumission/Refusé), contrairement aux lignes des
-      // représentants qui passaient déjà par mapIoStatus. Ça gonflait le
-      // total Shopify d'environ 38 000 $ (soumissions Shopify non fermées
-      // comptées comme des ventes). Même filtre appliqué ici désormais.
-      if (status === null) continue;
+      // Seul "Confirmé" compte comme vente Shopify reelle - maintenant que
+      // mapIoStatus reconnait aussi Contrat/VFR et Refuse (voir plus haut),
+      // un simple check "!== null" laisserait passer des soumissions/
+      // refus Boutique/Web comme si c'etait du chiffre d'affaires realise.
+      if (status !== 'Confirmé') continue;
       shopify.push({
         source: SHOPIFY_SOURCE,
         externalId,

@@ -189,10 +189,15 @@ async function renderBigCards() {
   ]);
 
   const yoyCard = (title, icon, data, trend, showLabels) => {
+    const targetLine =
+      data.target !== undefined
+        ? `<div class="goal-progress-text"><span>Objectif : ${data.target !== null ? money.format(data.target) : 'à venir'}</span>${data.pct !== null ? `<strong>${data.pct.toFixed(0)}%</strong>` : ''}</div>`
+        : '';
     return `
     <div class="big-card">
       <div class="big-card-title">${iconSvg(icon) ? `<span class="nav-icon">${iconSvg(icon)}</span>` : ''}${title}</div>
       <div class="big-card-value">${money.format(data.current.totals.grandTotal)}</div>
+      ${targetLine}
       <div class="big-card-compare">
         <span class="compare-years">vs même période l'an dernier : <strong>${money.format(data.previousYear.totals.grandTotal)}</strong></span>
         ${deltaBadgeHtml(data.changePct)}
@@ -264,7 +269,7 @@ async function renderCounters() {
         <div class="counter-card">
           <div class="counter-title"><span class="nav-icon">${iconSvg(icon)}</span>${label}${tierDotHtml(tier)}</div>
           <div class="counter-value">${num.format(s.current)}</div>
-          <div class="counter-compare">vs ${num.format(s.previous)} (7 jours précédents) ${deltaBadgeHtml(s.changePct)}</div>
+          <div class="counter-compare">${money.format(s.amount)} · vs ${num.format(s.previous)} (7 jours précédents) ${deltaBadgeHtml(s.changePct)}</div>
         </div>`;
     })
     .join('');

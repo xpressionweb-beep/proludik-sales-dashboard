@@ -178,6 +178,7 @@ const CARD_BASE_OFFSET = { week: -1, month: 0, year: 0 };
 
 function getYoY(referenceDate = new Date()) {
   const sales = db.getAllSales();
+  const objectifs = loadObjectifs();
   const result = {};
 
   for (const [type, offset] of Object.entries(YOY_OFFSET)) {
@@ -192,6 +193,17 @@ function getYoY(referenceDate = new Date()) {
       previousYear: { label: prevYear.label, totals: prevYearTotals },
       changePct: pctChange(curTotals.grandTotal, prevYearTotals.grandTotal),
     };
+
+    // Objectif du mois (carte "Ce mois" uniquement) - somme des 4
+    // divisions pour ce mois-la (config/objectifs.json > monthlyTotal).
+    if (type === 'month') {
+      const fyLabel = fiscalYearLabel(cur.start);
+      const monthKey = String(cur.start.getMonth() + 1);
+      const monthlyTargets = (objectifs.monthlyTotal && objectifs.monthlyTotal[fyLabel]) || {};
+      const target = monthlyTargets[monthKey] != null ? monthlyTargets[monthKey] : null;
+      result[type].target = target;
+      result[type].pct = target ? (curTotals.grandTotal / target) * 100 : null;
+    }
   }
 
   return result;
@@ -393,14 +405,21 @@ function getStatusCounts7d(referenceDate = new Date()) {
   const cur = getBounds('rolling7', 0, referenceDate);
   const prev = getBounds('rolling7', -1, referenceDate);
 
-  const countFor = (status, { start, end }) =>
-    sales.filter((s) => s.source === 'io' && s.status === status && inRange(s.orderDate, start, end)).length;
+  const forStatus = (status, { start, end }) => {
+    const matches = sales.filter((s) => s.source === 'io' && s.status === status && inRange(s.orderDate, start, end));
+    return { count: matches.length, amount: matches.reduce((sum, s) => sum + s.amount, 0) };
+  };
 
   const statuses = {};
   for (const status of config.io.statuses) {
-    const current = countFor(status, cur);
-    const previous = countFor(status, prev);
-    statuses[status] = { current, previous, changePct: pctChange(current, previous) };
+    const current = forStatus(status, cur);
+    const previous = forStatus(status, prev);
+    statuses[status] = {
+      current: current.count,
+      previous: previous.count,
+      changePct: pctChange(current.count, previous.count),
+      amount: current.amount,
+    };
   }
 
   return { current: { label: cur.label }, previous: { label: prev.label }, statuses };
