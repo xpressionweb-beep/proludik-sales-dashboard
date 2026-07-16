@@ -100,6 +100,22 @@ function repInitials(name) {
     .toUpperCase();
 }
 
+// Une couleur distincte par representant (avatar du tableau "Performance
+// des representants") - purement visuel, aide a reperer chaque ligne d'un
+// coup d'oeil. Couleurs fixes (pas generees par hash) pour rester stables
+// meme si l'ordre des lignes change; fallback bleu si un nouveau
+// representant apparait un jour.
+const REP_AVATAR_COLORS = {
+  'Cedric Paré': '#2f6fed',
+  'Mathis Beaupré': '#16a34a',
+  'Didier Paradis': '#f59e0b',
+  'Jerome Goulet': '#8b5cf6',
+};
+
+function repAvatarColor(name) {
+  return REP_AVATAR_COLORS[name] || '#2f6fed';
+}
+
 function deltaBadgeHtml(changePct) {
   if (changePct === null || Number.isNaN(changePct)) return '<span class="delta-badge muted">—</span>';
   const cls = changePct >= 0 ? 'up' : 'down';
@@ -312,7 +328,7 @@ async function renderRepTable() {
   for (const r of data.reps) {
     rows.push(`
       <tr>
-        <td><div class="rep-name-cell"><span class="rep-avatar">${repInitials(r.rep)}</span>${r.rep}</div></td>
+        <td><div class="rep-name-cell"><span class="rep-avatar" style="background:${repAvatarColor(r.rep)}">${repInitials(r.rep)}</span>${r.rep}</div></td>
         <td class="num-cell">${money.format(r.byStatus['Confirmé'])}</td>
         <td class="num-cell">${money.format(r.byStatus['Soumission'])}</td>
         <td class="num-cell">${money.format(r.byStatus['Contrat/VFR'])}</td>
