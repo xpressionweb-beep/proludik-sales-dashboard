@@ -61,6 +61,10 @@ router.get('/rep-conversion-summary', (req, res) => {
   res.json(aggregate.getRepConversionSummary());
 });
 
+router.get('/new-dossiers-7d', (req, res) => {
+  res.json(aggregate.getNewDossiers7d());
+});
+
 router.get('/divisions', (req, res) => {
   res.json(aggregate.getDivisionBreakdown());
 });

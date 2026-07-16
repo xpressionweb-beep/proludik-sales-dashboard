@@ -341,6 +341,22 @@ async function renderRepTable() {
   document.getElementById('repTableBody').innerHTML = rows.join('');
 }
 
+async function renderNewDossiers() {
+  const data = await fetchJson('/api/new-dossiers-7d');
+
+  document.getElementById('newDossiers').innerHTML = data.divisions
+    .map((d) => {
+      const tier = tierClass(ratioPct(d.current, d.previous));
+      return `
+        <div class="counter-card">
+          <div class="counter-title">${d.name}${tierDotHtml(tier)}</div>
+          <div class="counter-value">${num.format(d.current)}</div>
+          <div class="counter-compare">vs ${num.format(d.previous)} (7 jours précédents) ${deltaBadgeHtml(d.changePct)}</div>
+        </div>`;
+    })
+    .join('');
+}
+
 // ---------- Fenetres par division (Location/Fabrication/Reparation/Vente + Global) ----------
 async function renderDivisions() {
   const data = await fetchJson('/api/divisions');
@@ -597,6 +613,7 @@ async function loadAll() {
     renderQuickMetrics(),
     renderBigCards(),
     renderCounters(),
+    renderNewDossiers(),
     renderDivisions(),
     renderRepTable(),
     renderMonthlySalesTable(),

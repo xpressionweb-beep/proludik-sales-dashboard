@@ -143,6 +143,13 @@ function buildRecords(rows, { sinceIso } = {}) {
     // No Contrat manque parfois (ex: certaines lignes web/boutique) -> id
     // de secours base sur client+date pour rester stable d'une sync a l'autre.
     const externalId = String(row['No Contrat'] || `${row['Client'] || 'client'}-${orderDate}`);
+    // "Date" = date de l'evenement/location (peut etre dans le futur pour
+    // un dossier deja confirme). "Date création" = date a laquelle le
+    // dossier a ete ouvert - utilisee pour la statistique "nouveaux
+    // dossiers" (voir getNewDossiers7d), distincte de "Date" qui sert a
+    // tout le reste du dashboard (chiffre d'affaires, cartes YoY, etc.).
+    // Fallback sur orderDate si la colonne manque sur une ligne donnee.
+    const createdDate = toIso(row['Date création']) || orderDate;
 
     const status = mapIoStatus(row['Statut simplifié']);
 
@@ -160,6 +167,7 @@ function buildRecords(rows, { sinceIso } = {}) {
         amount,
         currency: 'CAD',
         orderDate,
+        createdDate,
       });
       continue;
     }
@@ -174,6 +182,7 @@ function buildRecords(rows, { sinceIso } = {}) {
       amount,
       currency: 'CAD',
       orderDate,
+      createdDate,
       type: normalizeIoType(row['Type']),
     });
   }

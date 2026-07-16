@@ -433,6 +433,40 @@ function getStatusCounts7d(referenceDate = new Date()) {
   return { current: { label: cur.label }, previous: { label: prev.label }, statuses };
 }
 
+// "Nouveaux dossiers" par division (Location/Fabrication/Reparation/
+// Vente): contrairement a "Confirmes/Soumissions/VRF" (bases sur "Date" =
+// date de l'evenement/location), cette statistique se base sur "Date
+// création" (quand le dossier a ete ouvert dans IO) - repond a "combien de
+// nouvelles affaires sont entrees" plutot que "combien d'evenements ont
+// lieu cette semaine". Compte les CONTRATS uniques, tous statuts confondus
+// (Confirme/Soumission/Contrat-VFR/Refuse: un dossier ouvert reste un
+// dossier ouvert peu importe son issue), fenetre glissante de 7 jours
+// (meme logique que getStatusCounts7d).
+function getNewDossiers7d(referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const cur = getBounds('rolling7', 0, referenceDate);
+  const prev = getBounds('rolling7', -1, referenceDate);
+
+  const countFor = (divisionName, { start, end }) => {
+    const matches = sales.filter((sale) => {
+      if (!inRange(sale.createdDate || sale.orderDate, start, end)) return false;
+      if (sale.source === 'shopify') return divisionName === 'Vente';
+      if (sale.source !== 'io') return false;
+      const type = IO_TYPES.includes(sale.type) ? sale.type : 'Autre';
+      return type === divisionName;
+    });
+    return new Set(matches.map((sale) => sale.externalId)).size;
+  };
+
+  const divisions = IO_TYPES.map((name) => {
+    const current = countFor(name, cur);
+    const previous = countFor(name, prev);
+    return { name, current, previous, changePct: pctChange(current, previous) };
+  });
+
+  return { current: { label: cur.label }, previous: { label: prev.label }, divisions };
+}
+
 // Taux de conversion moyen parmi les representants IO connus (config/
 // objectifs.json) - PAS la boutique Shopify, qui n'a pas de representant.
 // Simple moyenne arithmetique des taux individuels (pas ponderee par
@@ -621,5 +655,6 @@ module.exports = {
   getRecentActivity,
   getMonthlySalesTable,
   getDivisionBreakdown,
+  getNewDossiers7d,
   fiscalYearLabel,
 };
