@@ -323,21 +323,6 @@ async function renderRepTable() {
       </tr>`);
   }
 
-  // Ligne "Web" (Shopify) - categorie distincte, pas de repartition par
-  // statut IO (Confirme/Soumission/VRF ne s'appliquent pas a Shopify).
-  const s = data.shopify;
-  rows.push(`
-    <tr>
-      <td><div class="rep-name-cell"><span class="rep-avatar" style="background:var(--brand-red)">WEB</span>Boutique Shopify</div></td>
-      <td class="num-cell" title="Total des ventes Shopify (pas de statut par vente)">${money.format(s.amount)}</td>
-      <td class="num-cell">—</td>
-      <td class="num-cell">—</td>
-      <td class="num-cell">—</td>
-      <td class="num-cell">${s.target !== null ? money.format(s.target) : '—'}</td>
-      <td class="progress-cell">${progressCellHtml(s.pct)}</td>
-      <td>${scoreRingHtml(s.pct)}</td>
-    </tr>`);
-
   document.getElementById('repTableBody').innerHTML = rows.join('');
 }
 
