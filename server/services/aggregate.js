@@ -447,7 +447,7 @@ function getNewDossiers7d(referenceDate = new Date()) {
   const cur = getBounds('rolling7', 0, referenceDate);
   const prev = getBounds('rolling7', -1, referenceDate);
 
-  const countFor = (divisionName, { start, end }) => {
+  const forDivision = (divisionName, { start, end }) => {
     const matches = sales.filter((sale) => {
       if (!inRange(sale.createdDate || sale.orderDate, start, end)) return false;
       if (sale.source === 'shopify') return divisionName === 'Vente';
@@ -455,13 +455,20 @@ function getNewDossiers7d(referenceDate = new Date()) {
       const type = IO_TYPES.includes(sale.type) ? sale.type : 'Autre';
       return type === divisionName;
     });
-    return new Set(matches.map((sale) => sale.externalId)).size;
+    const uniqueContracts = new Set(matches.map((sale) => sale.externalId));
+    return { count: uniqueContracts.size, amount: matches.reduce((sum, sale) => sum + sale.amount, 0) };
   };
 
   const divisions = IO_TYPES.map((name) => {
-    const current = countFor(name, cur);
-    const previous = countFor(name, prev);
-    return { name, current, previous, changePct: pctChange(current, previous) };
+    const current = forDivision(name, cur);
+    const previous = forDivision(name, prev);
+    return {
+      name,
+      current: current.count,
+      previous: previous.count,
+      changePct: pctChange(current.count, previous.count),
+      amount: current.amount,
+    };
   });
 
   return { current: { label: cur.label }, previous: { label: prev.label }, divisions };

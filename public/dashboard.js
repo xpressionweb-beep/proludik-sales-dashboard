@@ -351,7 +351,7 @@ async function renderNewDossiers() {
         <div class="counter-card">
           <div class="counter-title">${d.name}${tierDotHtml(tier)}</div>
           <div class="counter-value">${num.format(d.current)}</div>
-          <div class="counter-compare">vs ${num.format(d.previous)} (7 jours précédents) ${deltaBadgeHtml(d.changePct)}</div>
+          <div class="counter-compare">${money.format(d.amount)} · vs ${num.format(d.previous)} (7 jours précédents) ${deltaBadgeHtml(d.changePct)}</div>
         </div>`;
     })
     .join('');
@@ -612,7 +612,6 @@ async function loadAll() {
   await Promise.all([
     renderQuickMetrics(),
     renderBigCards(),
-    renderCounters(),
     renderNewDossiers(),
     renderDivisions(),
     renderRepTable(),
