@@ -2,8 +2,8 @@
 :root[data-theme="dark"] {
   --bg-page: #0a0e17;
   --bg-sidebar: #0c1120;
-  --bg-card: #1b2338;
-  --bg-card-alt: #212a44;
+  --bg-card: #242f4d;
+  --bg-card-alt: #2b3757;
   --bg-header: #0a0e17;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
