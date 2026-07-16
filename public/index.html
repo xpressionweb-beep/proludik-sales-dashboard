@@ -129,20 +129,27 @@
             <table class="rep-table" id="monthlySalesTable">
               <thead>
                 <tr>
-                  <th>Mois</th>
-                  <th>$ Soumis</th>
-                  <th>$ Conclu</th>
-                  <th>% vs LY</th>
-                  <th>$ Objectif</th>
-                  <th>% Atteinte</th>
+                  <th rowspan="2">Mois</th>
+                  <th colspan="4" class="table-group-header">Inflatable Office</th>
+                  <th class="table-group-header">Vente</th>
+                  <th rowspan="2">% vs LY</th>
+                  <th rowspan="2">$ Objectif</th>
+                  <th rowspan="2">% Atteinte</th>
+                </tr>
+                <tr>
+                  <th>Location</th>
+                  <th>Fabrication</th>
+                  <th>VFR</th>
+                  <th class="io-subtotal-cell">Sous-total</th>
+                  <th>Boutique</th>
                 </tr>
               </thead>
               <tbody id="monthlySalesTableBody"></tbody>
             </table>
           </div>
           <p class="muted small table-footnote">
-            $ Conclu = Confirmé + Shopify (même définition que les grandes cartes). % vs LY = variation vs le même mois l'an dernier.
-            % Atteinte — vert ≥ 100%, jaune 75-99%, rouge &lt; 75%.
+            Location / Fabrication / VFR = répartition du $ Conclu (dossiers Confirmés) par type IO. Boutique = ventes Shopify.
+            % vs LY = variation du $ Conclu total vs le même mois l'an dernier. % Atteinte — vert ≥ 100%, jaune 75-99%, rouge &lt; 75%.
           </p>
         </section>
 

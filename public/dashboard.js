@@ -354,8 +354,11 @@ async function renderMonthlySalesTable() {
       (r) => `
       <tr>
         <td>${r.label}</td>
-        <td class="num-cell">${money.format(r.submitted)}</td>
-        <td class="num-cell">${money.format(r.concluded)}</td>
+        <td class="num-cell">${money.format(r.location)}</td>
+        <td class="num-cell">${money.format(r.fabrication)}</td>
+        <td class="num-cell">${money.format(r.vfr)}</td>
+        <td class="num-cell io-subtotal-cell">${money.format(r.ioSubtotal)}</td>
+        <td class="num-cell">${money.format(r.boutique)}</td>
         <td class="num-cell">${r.changePct !== null ? pctFmt(r.changePct) : '—'}</td>
         <td class="num-cell">${r.target !== null ? money.format(r.target) : '—'}</td>
         ${pctCellHtml(r.pct)}
@@ -367,8 +370,11 @@ async function renderMonthlySalesTable() {
   const totalRow = `
     <tr class="monthly-sales-total">
       <td>Total général</td>
-      <td class="num-cell">${money.format(t.submitted)}</td>
-      <td class="num-cell">${money.format(t.concluded)}</td>
+      <td class="num-cell">${money.format(t.location)}</td>
+      <td class="num-cell">${money.format(t.fabrication)}</td>
+      <td class="num-cell">${money.format(t.vfr)}</td>
+      <td class="num-cell io-subtotal-cell">${money.format(t.ioSubtotal)}</td>
+      <td class="num-cell">${money.format(t.boutique)}</td>
       <td class="num-cell">${t.changePct !== null ? pctFmt(t.changePct) : '—'}</td>
       <td class="num-cell">${t.target !== null ? money.format(t.target) : '—'}</td>
       ${pctCellHtml(t.pct)}

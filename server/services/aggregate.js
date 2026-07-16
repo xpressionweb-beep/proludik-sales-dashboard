@@ -136,6 +136,25 @@ function pctChange(current, previous) {
   return ((current - previous) / previous) * 100;
 }
 
+// Repartition du $ Conclu (statut Confirme uniquement, meme definition que
+// grandTotal ci-dessus) par type de dossier IO (Location / Fabrication /
+// VFR - voir excelStats.normalizeIoType). Les dossiers dont le type ne
+// matche aucune des 3 categories connues sont regroupes dans 'Autre': pas
+// affiches en colonne separee, mais inclus dans le sous-total IO pour que
+// la somme des colonnes du tableau "Ventes par mois" retombe juste.
+const IO_TYPES = ['Location', 'Fabrication', 'VFR'];
+
+function computeIoTypeTotals(sales, start, end) {
+  const totals = { Location: 0, Fabrication: 0, VFR: 0, Autre: 0 };
+  for (const sale of sales) {
+    if (sale.source !== 'io' || sale.status !== 'Confirmé') continue;
+    if (!inRange(sale.orderDate, start, end)) continue;
+    const type = IO_TYPES.includes(sale.type) ? sale.type : 'Autre';
+    totals[type] += sale.amount;
+  }
+  return totals;
+}
+
 // Comparaison "meme periode l'an dernier" (pas la periode precedente):
 // semaine -> 52 semaines en arriere, mois -> meme mois l'an dernier,
 // annee (fiscale) -> annee fiscale precedente (deja "l'an dernier" par
@@ -435,6 +454,7 @@ function getMonthlySalesTable(referenceDate = new Date()) {
     const totals = computeTotals(sales, monthStart, monthEnd);
     const lyTotals = computeTotals(sales, lyStart, lyEnd);
     const submitted = totals.io['Soumission'] ? totals.io['Soumission'].amount : 0;
+    const ioTypes = computeIoTypeTotals(sales, monthStart, monthEnd);
 
     const monthKey = String(monthStart.getMonth() + 1);
     const target = monthlyTargets[monthKey] != null ? monthlyTargets[monthKey] : null;
@@ -444,6 +464,11 @@ function getMonthlySalesTable(referenceDate = new Date()) {
       label: monthStart.toLocaleDateString('fr-CA', { month: 'short' }),
       month: monthKey,
       submitted,
+      location: ioTypes.Location,
+      fabrication: ioTypes.Fabrication,
+      vfr: ioTypes.VFR,
+      ioSubtotal: ioTypes.Location + ioTypes.Fabrication + ioTypes.VFR + ioTypes.Autre,
+      boutique: totals.shopify.amount,
       concluded: totals.grandTotal,
       lyConcluded: lyTotals.grandTotal,
       changePct: pctChange(totals.grandTotal, lyTotals.grandTotal),
@@ -455,6 +480,11 @@ function getMonthlySalesTable(referenceDate = new Date()) {
   const totalConcluded = rows.reduce((s, r) => s + r.concluded, 0);
   const totalLyConcluded = rows.reduce((s, r) => s + r.lyConcluded, 0);
   const totalSubmitted = rows.reduce((s, r) => s + r.submitted, 0);
+  const totalLocation = rows.reduce((s, r) => s + r.location, 0);
+  const totalFabrication = rows.reduce((s, r) => s + r.fabrication, 0);
+  const totalVfr = rows.reduce((s, r) => s + r.vfr, 0);
+  const totalIoSubtotal = rows.reduce((s, r) => s + r.ioSubtotal, 0);
+  const totalBoutique = rows.reduce((s, r) => s + r.boutique, 0);
   const targets = rows.map((r) => r.target).filter((t) => t !== null);
   const totalTarget = targets.length ? targets.reduce((s, t) => s + t, 0) : null;
   const totalPct = totalTarget ? (totalConcluded / totalTarget) * 100 : null;
@@ -465,6 +495,11 @@ function getMonthlySalesTable(referenceDate = new Date()) {
     rows,
     total: {
       submitted: totalSubmitted,
+      location: totalLocation,
+      fabrication: totalFabrication,
+      vfr: totalVfr,
+      ioSubtotal: totalIoSubtotal,
+      boutique: totalBoutique,
       concluded: totalConcluded,
       lyConcluded: totalLyConcluded,
       changePct: pctChange(totalConcluded, totalLyConcluded),

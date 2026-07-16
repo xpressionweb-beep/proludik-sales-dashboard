@@ -33,6 +33,23 @@ const REP_MAP = {
   Didier: 'Didier Paradis',
 };
 
+// Type de dossier (colonne "Type" du fichier) - utilise pour le tableau
+// "Ventes par mois" (repartition Location / Fabrication / VFR). Normalise
+// via startsWith/includes plutot qu'une egalite stricte, pour rester
+// robuste aux petites variations de casse/texte du fichier source (ex:
+// "Location" vs "location - evenement"). Tout ce qui ne matche aucune des
+// 3 categories connues tombe dans 'Autre' (inclus dans les sous-totaux
+// mais pas affiche en colonne separee).
+const IO_TYPES = ['Location', 'Fabrication', 'VFR'];
+
+function normalizeIoType(raw) {
+  const v = (raw || '').toString().trim().toLowerCase();
+  if (v.startsWith('location')) return 'Location';
+  if (v.startsWith('fabrication')) return 'Fabrication';
+  if (v.includes('vfr')) return 'VFR';
+  return 'Autre';
+}
+
 function buildDownloadUrl(shareUrl) {
   // Astuce lien de partage OneDrive/SharePoint: ajouter "download=1" force
   // le telechargement direct du binaire plutot que la page de previsualisation
@@ -145,6 +162,7 @@ function buildRecords(rows, { sinceIso } = {}) {
       amount,
       currency: 'CAD',
       orderDate,
+      type: normalizeIoType(row['Type']),
     });
   }
 
@@ -177,4 +195,5 @@ module.exports = {
   parseUploadedWorkbook,
   IO_SOURCE,
   SHOPIFY_SOURCE,
+  IO_TYPES,
 };

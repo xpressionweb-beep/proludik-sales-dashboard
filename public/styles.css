@@ -325,6 +325,9 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 }
 .rep-table .num-cell { font-variant-numeric: tabular-nums; }
 .monthly-sales-total td { font-weight: 700; border-top: 1px solid var(--border); border-bottom: none; }
+.table-group-header { text-align: center; background: var(--bg-subtle, rgba(0,0,0,0.03)); border-bottom: 1px solid var(--border); }
+.io-subtotal-cell { border-left: 1px dashed var(--border); font-weight: 600; }
+#monthlySalesTable th:nth-child(6), #monthlySalesTable td:nth-child(6) { border-left: 2px solid var(--border); }
 .progress-cell { min-width: 100px; }
 .mini-progress-track { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-bottom: 4px; }
 .mini-progress-fill { height: 100%; border-radius: 3px; background: var(--bad); }
