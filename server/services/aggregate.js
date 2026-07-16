@@ -221,10 +221,11 @@ function getYoY(referenceDate = new Date()) {
     const base = CARD_BASE_OFFSET[type] || 0;
     const cur = getBounds(type, base, referenceDate);
     const prevYear = getBounds(type, base + offset, referenceDate);
-    // "Semaine derniere"/"Ce mois": date de creation (voir
-    // computeTotalsByCreatedDate). "Annee financiere": date d'evenement
-    // (computeTotals), pour matcher le fichier de reference d'Isabelle.
-    const totalsFn = type === 'year' ? computeTotals : computeTotalsByCreatedDate;
+    // "Semaine derniere": date de creation (voir computeTotalsByCreatedDate)
+    // - suit "combien a-t-on confirme cette semaine". "Ce mois" et "Annee
+    // financiere": date d'evenement (computeTotals), pour matcher le
+    // fichier de reference d'Isabelle.
+    const totalsFn = type === 'week' ? computeTotalsByCreatedDate : computeTotals;
     const curTotals = totalsFn(sales, cur.start, cur.end);
     const prevYearTotals = totalsFn(sales, prevYear.start, prevYear.end);
 
@@ -401,7 +402,7 @@ function getTrend(cardType, referenceDate = new Date()) {
       const { start, end } = getBounds('week', offset, referenceDate);
       points.push({
         label: `S${isoWeekNumber(start)}`,
-        amount: computeTotalsByCreatedDate(sales, start, end).grandTotal,
+        amount: computeTotals(sales, start, end).grandTotal,
         current: offset === 0,
       });
     }
