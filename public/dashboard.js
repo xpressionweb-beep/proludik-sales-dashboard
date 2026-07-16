@@ -366,7 +366,10 @@ async function renderDivisions() {
     return `
       <div class="counter-card division-card${d.name === 'Global' ? ' division-card-global' : ''}">
         <div class="counter-title">${d.name}${tierDotHtml(tier)}</div>
-        <div class="counter-value">${money.format(d.total)}</div>
+        <div class="division-value-row">
+          <div class="counter-value">${money.format(d.total)}</div>
+          ${scoreRingHtml(d.pct)}
+        </div>
         <div class="counter-compare">Objectif : <strong>${d.target !== null ? money.format(d.target) : 'à venir'}</strong>${d.pct !== null ? ` (${d.pct.toFixed(0)}%)` : ''}</div>
         <div class="counter-compare">Semaine dernière : <strong>${money.format(d.lastWeek)}</strong></div>
       </div>`;
