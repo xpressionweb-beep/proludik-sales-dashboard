@@ -45,11 +45,11 @@
     }
   },
   "divisions": {
-    "_comment": "Objectifs annuels par division (fenetres Location/Fabrication/Reparation/Vente + Global). 'Vente' = somme des 12 mois de la cle 'monthly' ci-dessus (deja confirmee). Location/Fabrication/Reparation: EN ATTENTE - Jerome doit fournir les 3 chiffres annuels reels tires du fichier. Tant qu'ils sont null, la fenetre correspondante affiche l'objectif et le % comme non disponibles plutot qu'un faux zero.",
+    "_comment": "Objectifs annuels par division (fenetres Location/Fabrication/Reparation/Vente + Global), 2025-2026. Valeurs extraites du pivot complet d'Isabelle (12 mois, toutes divisions depliees) - somme des 4 = 3 325 000$, verifiee identique a l'objectif annuel global existant (config.divisions -> voir aussi 'global' ci-dessus).",
     "2025-2026": {
-      "Location": null,
-      "Fabrication": null,
-      "Réparation": null,
+      "Location": 2339994,
+      "Fabrication": 305004,
+      "Réparation": 30000,
       "Vente": 650002
     }
   }
