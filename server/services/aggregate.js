@@ -405,9 +405,17 @@ function getStatusCounts7d(referenceDate = new Date()) {
   const cur = getBounds('rolling7', 0, referenceDate);
   const prev = getBounds('rolling7', -1, referenceDate);
 
+  // Compte les CONTRATS uniques (externalId = "No Contrat"), pas les
+  // lignes individuelles du fichier Excel: un contrat a souvent 3-5 lignes
+  // (une par produit/item loue), donc compter les lignes brutes gonflait
+  // artificiellement le nombre affiche (ex: 42 "confirmations" pouvait
+  // representer une dizaine de contrats reels). Le montant $, lui, reste
+  // la somme de TOUTES les lignes (chaque ligne porte bien sa propre
+  // portion du montant, contrairement au compte).
   const forStatus = (status, { start, end }) => {
     const matches = sales.filter((s) => s.source === 'io' && s.status === status && inRange(s.orderDate, start, end));
-    return { count: matches.length, amount: matches.reduce((sum, s) => sum + s.amount, 0) };
+    const uniqueContracts = new Set(matches.map((s) => s.externalId));
+    return { count: uniqueContracts.size, amount: matches.reduce((sum, s) => sum + s.amount, 0) };
   };
 
   const statuses = {};
