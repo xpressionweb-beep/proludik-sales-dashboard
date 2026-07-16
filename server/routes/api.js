@@ -61,6 +61,10 @@ router.get('/rep-conversion-summary', (req, res) => {
   res.json(aggregate.getRepConversionSummary());
 });
 
+router.get('/divisions', (req, res) => {
+  res.json(aggregate.getDivisionBreakdown());
+});
+
 router.get('/monthly-sales-table', (req, res) => {
   res.json(aggregate.getMonthlySalesTable());
 });

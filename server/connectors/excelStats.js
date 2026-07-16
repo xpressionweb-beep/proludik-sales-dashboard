@@ -33,20 +33,23 @@ const REP_MAP = {
   Didier: 'Didier Paradis',
 };
 
-// Type de dossier (colonne "Type" du fichier) - utilise pour le tableau
-// "Ventes par mois" (repartition Location / Fabrication / VFR). Normalise
-// via startsWith/includes plutot qu'une egalite stricte, pour rester
-// robuste aux petites variations de casse/texte du fichier source (ex:
-// "Location" vs "location - evenement"). Tout ce qui ne matche aucune des
-// 3 categories connues tombe dans 'Autre' (inclus dans les sous-totaux
-// mais pas affiche en colonne separee).
-const IO_TYPES = ['Location', 'Fabrication', 'VFR'];
+// Type de dossier (colonne "Type" du fichier) - les 4 vraies divisions de
+// l'entreprise, confirmees sur le pivot complet de la collegue (onglets
+// Fabrication / Location / Reparation / Vente, memes 4 categories partout
+// dans le fichier): utilise pour le tableau "Ventes par mois" ET les
+// fenetres par division. Normalise via startsWith plutot qu'une egalite
+// stricte, pour rester robuste aux petites variations de texte du fichier
+// source. Tout ce qui ne matche aucune des 4 categories connues tombe
+// dans 'Autre' (inclus dans les sous-totaux mais pas affiche en colonne
+// separee).
+const IO_TYPES = ['Location', 'Fabrication', 'Réparation', 'Vente'];
 
 function normalizeIoType(raw) {
   const v = (raw || '').toString().trim().toLowerCase();
   if (v.startsWith('location')) return 'Location';
   if (v.startsWith('fabrication')) return 'Fabrication';
-  if (v.includes('vfr')) return 'VFR';
+  if (v.startsWith('réparation') || v.startsWith('reparation')) return 'Réparation';
+  if (v.startsWith('vente')) return 'Vente';
   return 'Autre';
 }
 

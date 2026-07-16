@@ -136,19 +136,26 @@ function pctChange(current, previous) {
   return ((current - previous) / previous) * 100;
 }
 
-// Repartition du $ Conclu (statut Confirme uniquement, meme definition que
-// grandTotal ci-dessus) par type de dossier IO (Location / Fabrication /
-// VFR - voir excelStats.normalizeIoType). Les dossiers dont le type ne
-// matche aucune des 3 categories connues sont regroupes dans 'Autre': pas
-// affiches en colonne separee, mais inclus dans le sous-total IO pour que
-// la somme des colonnes du tableau "Ventes par mois" retombe juste.
-const IO_TYPES = ['Location', 'Fabrication', 'VFR'];
+// Repartition du $ Conclu par division reelle de l'entreprise (Location /
+// Fabrication / Reparation / Vente - voir excelStats.normalizeIoType).
+// 'Vente' regroupe les dossiers IO de type Vente (ventes fermes hors
+// location/fabrication) ET les ventes Shopify (source='shopify', qui
+// n'ont pas de 'type' IO mais representent le meme genre de vente directe
+// - le fichier source de la collegue les fusionne deja dans sa propre
+// categorie "Vente"). Les dossiers IO dont le type ne matche aucune des 4
+// categories connues sont regroupes dans 'Autre': pas affiches en colonne
+// separee, mais inclus dans le sous-total pour que la somme retombe juste.
+const IO_TYPES = ['Location', 'Fabrication', 'Réparation', 'Vente'];
 
 function computeIoTypeTotals(sales, start, end) {
-  const totals = { Location: 0, Fabrication: 0, VFR: 0, Autre: 0 };
+  const totals = { Location: 0, Fabrication: 0, Réparation: 0, Vente: 0, Autre: 0 };
   for (const sale of sales) {
-    if (sale.source !== 'io' || sale.status !== 'Confirmé') continue;
     if (!inRange(sale.orderDate, start, end)) continue;
+    if (sale.source === 'shopify') {
+      totals.Vente += sale.amount;
+      continue;
+    }
+    if (sale.source !== 'io' || sale.status !== 'Confirmé') continue;
     const type = IO_TYPES.includes(sale.type) ? sale.type : 'Autre';
     totals[type] += sale.amount;
   }
@@ -244,7 +251,16 @@ function getRepBreakdown(type, offset = 0, referenceDate = new Date()) {
     }
   }
 
-  const rows = Array.from(byRep.values()).map((entry) => {
+  // Tableau "Performance des représentants": seulement l'équipe de vente
+  // officielle (Cédric/Mathis/Didier/Jérôme - noms complets, voir
+  // excelStats.REP_MAP). Exclut 'Gino', 'Non assigné', 'Autre' etc. -
+  // dossiers IO attribués à d'autres personnes/erreurs de saisie, pas des
+  // représentants à afficher dans ce tableau.
+  const VISIBLE_REPS = ['Cedric Paré', 'Mathis Beaupré', 'Didier Paradis', 'Jerome Goulet'];
+
+  const rows = Array.from(byRep.values())
+    .filter((entry) => VISIBLE_REPS.includes(entry.rep))
+    .map((entry) => {
     const annualTarget = objectifs.reps && objectifs.reps[entry.rep] && objectifs.reps[entry.rep][fyLabel];
     const confirmedAmount = entry.byStatus['Confirmé'] || 0;
     const target = annualTarget ? annualTarget / divisor : null;
@@ -466,9 +482,9 @@ function getMonthlySalesTable(referenceDate = new Date()) {
       submitted,
       location: ioTypes.Location,
       fabrication: ioTypes.Fabrication,
-      vfr: ioTypes.VFR,
-      ioSubtotal: ioTypes.Location + ioTypes.Fabrication + ioTypes.VFR + ioTypes.Autre,
-      boutique: totals.shopify.amount,
+      reparation: ioTypes.Réparation,
+      vente: ioTypes.Vente,
+      ioSubtotal: ioTypes.Location + ioTypes.Fabrication + ioTypes.Réparation + ioTypes.Vente + ioTypes.Autre,
       concluded: totals.grandTotal,
       lyConcluded: lyTotals.grandTotal,
       changePct: pctChange(totals.grandTotal, lyTotals.grandTotal),
@@ -482,9 +498,9 @@ function getMonthlySalesTable(referenceDate = new Date()) {
   const totalSubmitted = rows.reduce((s, r) => s + r.submitted, 0);
   const totalLocation = rows.reduce((s, r) => s + r.location, 0);
   const totalFabrication = rows.reduce((s, r) => s + r.fabrication, 0);
-  const totalVfr = rows.reduce((s, r) => s + r.vfr, 0);
+  const totalReparation = rows.reduce((s, r) => s + r.reparation, 0);
+  const totalVente = rows.reduce((s, r) => s + r.vente, 0);
   const totalIoSubtotal = rows.reduce((s, r) => s + r.ioSubtotal, 0);
-  const totalBoutique = rows.reduce((s, r) => s + r.boutique, 0);
   const targets = rows.map((r) => r.target).filter((t) => t !== null);
   const totalTarget = targets.length ? targets.reduce((s, t) => s + t, 0) : null;
   const totalPct = totalTarget ? (totalConcluded / totalTarget) * 100 : null;
@@ -497,14 +513,67 @@ function getMonthlySalesTable(referenceDate = new Date()) {
       submitted: totalSubmitted,
       location: totalLocation,
       fabrication: totalFabrication,
-      vfr: totalVfr,
+      reparation: totalReparation,
+      vente: totalVente,
       ioSubtotal: totalIoSubtotal,
-      boutique: totalBoutique,
       concluded: totalConcluded,
       lyConcluded: totalLyConcluded,
       changePct: pctChange(totalConcluded, totalLyConcluded),
       target: totalTarget,
       pct: totalPct,
+    },
+  };
+}
+
+// Fenetres "par division" (Location / Fabrication / Reparation / Vente +
+// Global): pour chacune, Total = $ Conclu depuis le debut de l'annee
+// financiere jusqu'a aujourd'hui (meme periode que la carte "Annee
+// financiere"), Objectif = cible annuelle de la division
+// (config/objectifs.json > divisions), Derniere semaine = $ Conclu de la
+// semaine derniere complete pour cette division (meme semaine que la
+// carte "Semaine derniere" - voir CARD_BASE_OFFSET plus haut). 'Global'
+// additionne les 4 divisions plutot que de reutiliser grandTotal/objectif
+// annuel directement: garantit que Global = somme exacte des 4 fenetres
+// meme si Autre (dossiers IO au type non reconnu) existe.
+function getDivisionBreakdown(referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const objectifs = loadObjectifs();
+  const { start: fyStart, end: fyEnd } = getBounds('year', 0, referenceDate);
+  const fyLabel = fiscalYearLabel(fyStart);
+  const todayEnd = new Date(Math.min(new Date(referenceDate).getTime(), fyEnd.getTime()));
+  const lastWeek = getBounds('week', -1, referenceDate);
+
+  const ytdTotals = computeIoTypeTotals(sales, fyStart, todayEnd);
+  const lastWeekTotals = computeIoTypeTotals(sales, lastWeek.start, lastWeek.end);
+  const divisionTargets = (objectifs.divisions && objectifs.divisions[fyLabel]) || {};
+
+  const divisions = IO_TYPES.map((name) => {
+    const target = divisionTargets[name] != null ? divisionTargets[name] : null;
+    const total = ytdTotals[name];
+    return {
+      name,
+      total,
+      target,
+      pct: target ? (total / target) * 100 : null,
+      lastWeek: lastWeekTotals[name],
+    };
+  });
+
+  const globalTarget = divisions.every((d) => d.target !== null)
+    ? divisions.reduce((s, d) => s + d.target, 0)
+    : null;
+  const globalTotal = divisions.reduce((s, d) => s + d.total, 0);
+  const globalLastWeek = divisions.reduce((s, d) => s + d.lastWeek, 0);
+
+  return {
+    fiscalYear: fyLabel,
+    divisions,
+    global: {
+      name: 'Global',
+      total: globalTotal,
+      target: globalTarget,
+      pct: globalTarget ? (globalTotal / globalTarget) * 100 : null,
+      lastWeek: globalLastWeek,
     },
   };
 }
@@ -521,5 +590,6 @@ module.exports = {
   getTrend,
   getRecentActivity,
   getMonthlySalesTable,
+  getDivisionBreakdown,
   fiscalYearLabel,
 };

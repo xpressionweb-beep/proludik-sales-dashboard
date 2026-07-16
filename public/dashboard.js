@@ -336,6 +336,24 @@ async function renderRepTable() {
   document.getElementById('repTableBody').innerHTML = rows.join('');
 }
 
+// ---------- Fenetres par division (Location/Fabrication/Reparation/Vente + Global) ----------
+async function renderDivisions() {
+  const data = await fetchJson('/api/divisions');
+
+  const cardHtml = (d) => {
+    const tier = tierClass(d.pct);
+    return `
+      <div class="counter-card division-card${d.name === 'Global' ? ' division-card-global' : ''}">
+        <div class="counter-title">${d.name}${tierDotHtml(tier)}</div>
+        <div class="counter-value">${money.format(d.total)}</div>
+        <div class="counter-compare">Objectif : <strong>${d.target !== null ? money.format(d.target) : 'à venir'}</strong>${d.pct !== null ? ` (${d.pct.toFixed(0)}%)` : ''}</div>
+        <div class="counter-compare">Semaine dernière : <strong>${money.format(d.lastWeek)}</strong></div>
+      </div>`;
+  };
+
+  document.getElementById('divisions').innerHTML = data.divisions.map(cardHtml).join('') + cardHtml(data.global);
+}
+
 // ---------- Ventes par mois (annee courante vs annee precedente) ----------
 function pctCellHtml(pct) {
   if (pct === null) return '<td class="num-cell">—</td>';
@@ -356,9 +374,9 @@ async function renderMonthlySalesTable() {
         <td>${r.label}</td>
         <td class="num-cell">${money.format(r.location)}</td>
         <td class="num-cell">${money.format(r.fabrication)}</td>
-        <td class="num-cell">${money.format(r.vfr)}</td>
+        <td class="num-cell">${money.format(r.reparation)}</td>
+        <td class="num-cell">${money.format(r.vente)}</td>
         <td class="num-cell io-subtotal-cell">${money.format(r.ioSubtotal)}</td>
-        <td class="num-cell">${money.format(r.boutique)}</td>
         <td class="num-cell">${r.changePct !== null ? pctFmt(r.changePct) : '—'}</td>
         <td class="num-cell">${r.target !== null ? money.format(r.target) : '—'}</td>
         ${pctCellHtml(r.pct)}
@@ -372,9 +390,9 @@ async function renderMonthlySalesTable() {
       <td>Total général</td>
       <td class="num-cell">${money.format(t.location)}</td>
       <td class="num-cell">${money.format(t.fabrication)}</td>
-      <td class="num-cell">${money.format(t.vfr)}</td>
+      <td class="num-cell">${money.format(t.reparation)}</td>
+      <td class="num-cell">${money.format(t.vente)}</td>
       <td class="num-cell io-subtotal-cell">${money.format(t.ioSubtotal)}</td>
-      <td class="num-cell">${money.format(t.boutique)}</td>
       <td class="num-cell">${t.changePct !== null ? pctFmt(t.changePct) : '—'}</td>
       <td class="num-cell">${t.target !== null ? money.format(t.target) : '—'}</td>
       ${pctCellHtml(t.pct)}
@@ -576,9 +594,9 @@ async function loadAll() {
     renderQuickMetrics(),
     renderBigCards(),
     renderCounters(),
+    renderDivisions(),
     renderRepTable(),
     renderMonthlySalesTable(),
-    renderActivity(),
     renderSocial(),
     renderMeta(),
     renderFiscalRange(),

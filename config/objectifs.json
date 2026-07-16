@@ -43,5 +43,14 @@
       "8": 48151,
       "9": 18688
     }
+  },
+  "divisions": {
+    "_comment": "Objectifs annuels par division (fenetres Location/Fabrication/Reparation/Vente + Global). 'Vente' = somme des 12 mois de la cle 'monthly' ci-dessus (deja confirmee). Location/Fabrication/Reparation: EN ATTENTE - Jerome doit fournir les 3 chiffres annuels reels tires du fichier. Tant qu'ils sont null, la fenetre correspondante affiche l'objectif et le % comme non disponibles plutot qu'un faux zero.",
+    "2025-2026": {
+      "Location": null,
+      "Fabrication": null,
+      "Réparation": null,
+      "Vente": 650002
+    }
   }
 }
