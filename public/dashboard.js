@@ -515,15 +515,13 @@ async function renderMeta() {
     ? `Données mises à jour à ${latest.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}`
     : 'Aucune synchronisation encore';
 
-  // Badge "Activité récente": reflete specifiquement le mode IO (bouton
-  // Réel/Démo du header), pas un "OU" avec Shopify - sinon le badge
-  // resterait bloque sur "Mode démo" tant que Shopify n'a pas de vraies
-  // cles, meme quand on bascule IO sur "Réel" (le statut de Shopify reste
-  // visible separement dans le pied de page, ci-dessus).
-  const isIoMock = meta.mock.io;
-  const badge = document.getElementById('activityBadge');
-  badge.classList.toggle('is-mock', isIoMock);
-  badge.innerHTML = `<span class="dot"></span>${isIoMock ? 'Mode démo' : 'Données réelles'}`;
+  // Badge "Données réelles/Mode démo": affiché dans le pied de page,
+  // reflete specifiquement le mode IO (bouton Réel/Démo du header), pas un
+  // "OU" avec Shopify - sinon le badge resterait bloque sur "Mode démo"
+  // tant que Shopify n'a pas de vraies cles, meme quand on bascule IO sur
+  // "Réel" (le statut de Shopify reste visible separement dans le pied de
+  // page, ci-dessus). L'élément activityBadge (carte "Activité récente")
+  // a été retiré du dashboard - ce badge n'existe donc plus ici.
 }
 
 // ---------- Annee financiere (haut a droite) ----------
