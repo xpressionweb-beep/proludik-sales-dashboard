@@ -136,6 +136,42 @@ function pctChange(current, previous) {
   return ((current - previous) / previous) * 100;
 }
 
+// Variante de computeTotals() qui filtre sur "Date création" (quand le
+// dossier a ete ouvert/confirme) plutot que "Date" (date de l'evenement).
+// Utilisee pour "Semaine derniere" et "Ce mois" (voir getYoY/getTrend
+// ci-dessous): un contrat de location dont l'EVENEMENT tombe en fin de
+// semaine gonflait ces cartes meme si l'entreprise est fermee samedi-
+// dimanche - alors qu'on veut plutot suivre "combien a-t-on confirme
+// cette semaine", peu importe quand l'evenement aura lieu. "Annee
+// financiere" et les fenetres par division restent sur computeTotals()
+// (date d'evenement) pour matcher exactement le fichier de reference
+// d'Isabelle.
+function computeTotalsByCreatedDate(sales, start, end) {
+  const io = {};
+  for (const status of config.io.statuses) io[status] = { amount: 0, count: 0 };
+  io.Autre = { amount: 0, count: 0 };
+  const shopify = { amount: 0, count: 0 };
+
+  for (const sale of sales) {
+    const d = sale.createdDate || sale.orderDate;
+    if (!inRange(d, start, end)) continue;
+    if (sale.source === 'io') {
+      const bucket = config.io.statuses.includes(sale.status) ? sale.status : 'Autre';
+      io[bucket].amount += sale.amount;
+      io[bucket].count += 1;
+    } else if (sale.source === 'shopify') {
+      shopify.amount += sale.amount;
+      shopify.count += 1;
+    }
+  }
+
+  const ioTotal = Object.values(io).reduce((s, b) => s + b.amount, 0);
+  const grandTotal = (io['Confirmé'] ? io['Confirmé'].amount : 0) + shopify.amount;
+  const pipelineTotal = ioTotal + shopify.amount;
+
+  return { io, ioTotal, shopify, grandTotal, pipelineTotal };
+}
+
 // Repartition du $ Conclu par division reelle de l'entreprise (Location /
 // Fabrication / Reparation / Vente - voir excelStats.normalizeIoType).
 // 'Vente' regroupe les dossiers IO de type Vente (ventes fermes hors
@@ -185,8 +221,12 @@ function getYoY(referenceDate = new Date()) {
     const base = CARD_BASE_OFFSET[type] || 0;
     const cur = getBounds(type, base, referenceDate);
     const prevYear = getBounds(type, base + offset, referenceDate);
-    const curTotals = computeTotals(sales, cur.start, cur.end);
-    const prevYearTotals = computeTotals(sales, prevYear.start, prevYear.end);
+    // "Semaine derniere"/"Ce mois": date de creation (voir
+    // computeTotalsByCreatedDate). "Annee financiere": date d'evenement
+    // (computeTotals), pour matcher le fichier de reference d'Isabelle.
+    const totalsFn = type === 'year' ? computeTotals : computeTotalsByCreatedDate;
+    const curTotals = totalsFn(sales, cur.start, cur.end);
+    const prevYearTotals = totalsFn(sales, prevYear.start, prevYear.end);
 
     result[type] = {
       current: { label: cur.label, totals: curTotals },
@@ -349,18 +389,19 @@ function getTrend(cardType, referenceDate = new Date()) {
 
   if (cardType === 'week') {
     // Semaine derniere complete (lundi-dimanche) - voir CARD_BASE_OFFSET
-    // dans getYoY() pour le meme choix applique a la grande carte.
+    // dans getYoY() pour le meme choix applique a la grande carte. Date de
+    // creation (pas date d'evenement) - voir computeTotalsByCreatedDate.
     const { start, end } = getBounds('week', -1, referenceDate);
     for (let d = new Date(start); d < end; d = addDays(d, 1)) {
       const dayEnd = addDays(d, 1);
-      points.push({ label: d.toLocaleDateString('fr-CA', { weekday: 'short' }), amount: computeTotals(sales, d, dayEnd).grandTotal });
+      points.push({ label: d.toLocaleDateString('fr-CA', { weekday: 'short' }), amount: computeTotalsByCreatedDate(sales, d, dayEnd).grandTotal });
     }
   } else if (cardType === 'month') {
     for (let offset = -2; offset <= 2; offset += 1) {
       const { start, end } = getBounds('week', offset, referenceDate);
       points.push({
         label: `S${isoWeekNumber(start)}`,
-        amount: computeTotals(sales, start, end).grandTotal,
+        amount: computeTotalsByCreatedDate(sales, start, end).grandTotal,
         current: offset === 0,
       });
     }
