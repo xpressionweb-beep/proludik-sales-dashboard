@@ -232,7 +232,7 @@ async function renderBigCards() {
     // "Ce mois": 5 semaines (2 precedentes, en cours, 2 suivantes) -
     // numeros de semaine affiches sous le graphique (voir getTrend cote
     // serveur pour le detail des semaines calendaires retenues).
-    yoyCard('Ce mois', 'calendar', yoy.month, trendMonth, true) +
+    yoyCard('Vente total pour le mois en cours', 'calendar', yoy.month, trendMonth, true) +
     // "Année financière": 13 mois civils (6 precedents, en cours, 6
     // suivants) affiches sous le graphique.
     yoyCard('Année financière', 'dollar', yoy.year, trendYear, true) +
