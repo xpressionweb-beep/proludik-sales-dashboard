@@ -468,6 +468,7 @@ function getNewDossiers7d(referenceDate = new Date()) {
       previous: previous.count,
       changePct: pctChange(current.count, previous.count),
       amount: current.amount,
+      previousAmount: previous.amount,
     };
   });
 

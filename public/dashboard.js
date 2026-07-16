@@ -351,7 +351,7 @@ async function renderNewDossiers() {
         <div class="counter-card">
           <div class="counter-title">${d.name}${tierDotHtml(tier)}</div>
           <div class="counter-value">${num.format(d.current)}</div>
-          <div class="counter-compare">${money.format(d.amount)} · vs ${num.format(d.previous)} (7 jours précédents) ${deltaBadgeHtml(d.changePct)}</div>
+          <div class="counter-compare">${money.format(d.amount)} · vs ${num.format(d.previous)} (${money.format(d.previousAmount)}) 7 jours précédents ${deltaBadgeHtml(d.changePct)}</div>
         </div>`;
     })
     .join('');
