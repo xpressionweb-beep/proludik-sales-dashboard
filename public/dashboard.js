@@ -228,7 +228,7 @@ async function renderBigCards() {
     </div>`;
 
   document.getElementById('bigCards').innerHTML =
-    yoyCard('Semaine dernière', 'chart', yoy.week, trendWeek, false) +
+    yoyCard('Ventes et contrats confirmés (semaine dernière)', 'chart', yoy.week, trendWeek, false) +
     // "Ce mois": 5 semaines (2 precedentes, en cours, 2 suivantes) -
     // numeros de semaine affiches sous le graphique (voir getTrend cote
     // serveur pour le detail des semaines calendaires retenues).
