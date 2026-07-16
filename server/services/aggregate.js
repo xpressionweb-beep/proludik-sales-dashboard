@@ -526,24 +526,27 @@ function getMonthlySalesTable(referenceDate = new Date()) {
 }
 
 // Fenetres "par division" (Location / Fabrication / Reparation / Vente +
-// Global): pour chacune, Total = $ Conclu depuis le debut de l'annee
-// financiere jusqu'a aujourd'hui (meme periode que la carte "Annee
-// financiere"), Objectif = cible annuelle de la division
-// (config/objectifs.json > divisions), Derniere semaine = $ Conclu de la
-// semaine derniere complete pour cette division (meme semaine que la
-// carte "Semaine derniere" - voir CARD_BASE_OFFSET plus haut). 'Global'
-// additionne les 4 divisions plutot que de reutiliser grandTotal/objectif
-// annuel directement: garantit que Global = somme exacte des 4 fenetres
-// meme si Autre (dossiers IO au type non reconnu) existe.
+// Global): pour chacune, Total = $ Conclu sur l'annee financiere AU
+// COMPLET (memes bornes que la carte "Annee financiere" - PAS limite a
+// aujourd'hui: un dossier deja Confirme compte des sa confirmation, meme
+// si sa date d'evenement/livraison tombe plus tard dans l'annee - sinon
+// les 4 fenetres ne totaliseraient pas la meme somme que la carte "Annee
+// financiere", qui elle n'applique aucune limite de date du jour).
+// Objectif = cible annuelle de la division (config/objectifs.json >
+// divisions). Derniere semaine = $ Conclu de la semaine derniere complete
+// pour cette division (meme semaine que la carte "Semaine derniere" - voir
+// CARD_BASE_OFFSET plus haut). 'Global' additionne les 4 divisions plutot
+// que de reutiliser grandTotal/objectif annuel directement: garantit que
+// Global = somme exacte des 4 fenetres meme si Autre (dossiers IO au type
+// non reconnu) existe.
 function getDivisionBreakdown(referenceDate = new Date()) {
   const sales = db.getAllSales();
   const objectifs = loadObjectifs();
   const { start: fyStart, end: fyEnd } = getBounds('year', 0, referenceDate);
   const fyLabel = fiscalYearLabel(fyStart);
-  const todayEnd = new Date(Math.min(new Date(referenceDate).getTime(), fyEnd.getTime()));
   const lastWeek = getBounds('week', -1, referenceDate);
 
-  const ytdTotals = computeIoTypeTotals(sales, fyStart, todayEnd);
+  const ytdTotals = computeIoTypeTotals(sales, fyStart, fyEnd);
   const lastWeekTotals = computeIoTypeTotals(sales, lastWeek.start, lastWeek.end);
   const divisionTargets = (objectifs.divisions && objectifs.divisions[fyLabel]) || {};
 
