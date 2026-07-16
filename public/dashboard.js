@@ -223,7 +223,7 @@ async function renderBigCards() {
     </div>`;
 
   document.getElementById('bigCards').innerHTML =
-    yoyCard('Cette semaine', 'chart', yoy.week, trendWeek, false) +
+    yoyCard('Semaine dernière', 'chart', yoy.week, trendWeek, false) +
     // "Ce mois": 5 semaines (2 precedentes, en cours, 2 suivantes) -
     // numeros de semaine affiches sous le graphique (voir getTrend cote
     // serveur pour le detail des semaines calendaires retenues).
@@ -334,6 +334,47 @@ async function renderRepTable() {
     </tr>`);
 
   document.getElementById('repTableBody').innerHTML = rows.join('');
+}
+
+// ---------- Ventes par mois (annee courante vs annee precedente) ----------
+function pctCellHtml(pct) {
+  if (pct === null) return '<td class="num-cell">—</td>';
+  const tier = tierClass(pct);
+  return `<td class="num-cell">${pct.toFixed(0)}%${tierDotHtml(tier)}</td>`;
+}
+
+async function renderMonthlySalesTable() {
+  const data = await fetchJson('/api/monthly-sales-table');
+
+  document.getElementById('monthlySalesFyCur').textContent = data.fiscalYear;
+  document.getElementById('monthlySalesFyPrev').textContent = data.previousFiscalYear;
+
+  const rows = data.rows
+    .map(
+      (r) => `
+      <tr>
+        <td>${r.label}</td>
+        <td class="num-cell">${money.format(r.submitted)}</td>
+        <td class="num-cell">${money.format(r.concluded)}</td>
+        <td class="num-cell">${r.changePct !== null ? pctFmt(r.changePct) : '—'}</td>
+        <td class="num-cell">${r.target !== null ? money.format(r.target) : '—'}</td>
+        ${pctCellHtml(r.pct)}
+      </tr>`
+    )
+    .join('');
+
+  const t = data.total;
+  const totalRow = `
+    <tr class="monthly-sales-total">
+      <td>Total général</td>
+      <td class="num-cell">${money.format(t.submitted)}</td>
+      <td class="num-cell">${money.format(t.concluded)}</td>
+      <td class="num-cell">${t.changePct !== null ? pctFmt(t.changePct) : '—'}</td>
+      <td class="num-cell">${t.target !== null ? money.format(t.target) : '—'}</td>
+      ${pctCellHtml(t.pct)}
+    </tr>`;
+
+  document.getElementById('monthlySalesTableBody').innerHTML = rows + totalRow;
 }
 
 // ---------- Activite recente (donnees reelles) ----------
@@ -530,6 +571,7 @@ async function loadAll() {
     renderBigCards(),
     renderCounters(),
     renderRepTable(),
+    renderMonthlySalesTable(),
     renderActivity(),
     renderSocial(),
     renderMeta(),

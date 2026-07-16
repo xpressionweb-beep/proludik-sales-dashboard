@@ -142,13 +142,22 @@ function pctChange(current, previous) {
 // definition). Utilise pour les 4 grandes cartes du dashboard.
 const YOY_OFFSET = { week: -52, month: -12, year: -1 };
 
+// Decalage de la periode "courante" avant application du YOY_OFFSET
+// ci-dessus. Pour "week" on affiche la semaine derniere COMPLETE
+// (lundi-dimanche) plutot que la semaine en cours (encore partielle la
+// plupart du temps) - les rencontres d'equipe ayant lieu le mardi, la
+// semaine en cours n'a presque jamais de chiffres complets a ce moment-la.
+// month/year restent sur la periode en cours (0).
+const CARD_BASE_OFFSET = { week: -1, month: 0, year: 0 };
+
 function getYoY(referenceDate = new Date()) {
   const sales = db.getAllSales();
   const result = {};
 
   for (const [type, offset] of Object.entries(YOY_OFFSET)) {
-    const cur = getBounds(type, 0, referenceDate);
-    const prevYear = getBounds(type, offset, referenceDate);
+    const base = CARD_BASE_OFFSET[type] || 0;
+    const cur = getBounds(type, base, referenceDate);
+    const prevYear = getBounds(type, base + offset, referenceDate);
     const curTotals = computeTotals(sales, cur.start, cur.end);
     const prevYearTotals = computeTotals(sales, prevYear.start, prevYear.end);
 
@@ -292,10 +301,10 @@ function getTrend(cardType, referenceDate = new Date()) {
   const points = [];
 
   if (cardType === 'week') {
-    const { start } = getBounds('week', 0, referenceDate);
-    const today = new Date(referenceDate);
-    today.setHours(0, 0, 0, 0);
-    for (let d = new Date(start); d <= today; d = addDays(d, 1)) {
+    // Semaine derniere complete (lundi-dimanche) - voir CARD_BASE_OFFSET
+    // dans getYoY() pour le meme choix applique a la grande carte.
+    const { start, end } = getBounds('week', -1, referenceDate);
+    for (let d = new Date(start); d < end; d = addDays(d, 1)) {
       const dayEnd = addDays(d, 1);
       points.push({ label: d.toLocaleDateString('fr-CA', { weekday: 'short' }), amount: computeTotals(sales, d, dayEnd).grandTotal });
     }
@@ -396,6 +405,75 @@ function getRecentActivity(limit = 8) {
     }));
 }
 
+// Tableau "Ventes par mois" (reproduit le format du fichier de stats
+// manuel d'Isabelle): pour chaque mois de l'annee financiere en cours (12
+// mois, oct->sept) - $ Soumis (montant des soumissions IO ouvertes ce
+// mois-la, statut 'Soumission'), $ Conclu (meme definition que grandTotal
+// ailleurs dans le dashboard: Confirme + Shopify), % vs LY (variation de
+// $ Conclu vs meme mois l'an dernier), $ Objectif (config/objectifs.json >
+// monthly, annee courante seulement - le fichier source n'a pas de cible
+// mensuelle pour l'annee precedente), % Atteinte Obj. Le code couleur du %
+// Atteinte reutilise tierClass() cote client (vert >=100%, jaune >=75%,
+// rouge <75%) - PAS forcement identique aux puces du fichier Excel source
+// (dont la logique exacte n'est pas documentee), mais coherent avec le
+// reste du dashboard.
+function getMonthlySalesTable(referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const objectifs = loadObjectifs();
+  const { start: fyStart } = getBounds('year', 0, referenceDate);
+  const fyLabel = fiscalYearLabel(fyStart);
+  const prevFyLabel = fiscalYearLabel(addDays(fyStart, -1));
+  const monthlyTargets = (objectifs.monthly && objectifs.monthly[fyLabel]) || {};
+
+  const rows = [];
+  for (let i = 0; i < 12; i += 1) {
+    const monthStart = new Date(fyStart.getFullYear(), fyStart.getMonth() + i, 1);
+    const monthEnd = new Date(fyStart.getFullYear(), fyStart.getMonth() + i + 1, 1);
+    const lyStart = new Date(monthStart.getFullYear() - 1, monthStart.getMonth(), 1);
+    const lyEnd = new Date(monthStart.getFullYear() - 1, monthStart.getMonth() + 1, 1);
+
+    const totals = computeTotals(sales, monthStart, monthEnd);
+    const lyTotals = computeTotals(sales, lyStart, lyEnd);
+    const submitted = totals.io['Soumission'] ? totals.io['Soumission'].amount : 0;
+
+    const monthKey = String(monthStart.getMonth() + 1);
+    const target = monthlyTargets[monthKey] != null ? monthlyTargets[monthKey] : null;
+    const pct = target ? (totals.grandTotal / target) * 100 : null;
+
+    rows.push({
+      label: monthStart.toLocaleDateString('fr-CA', { month: 'short' }),
+      month: monthKey,
+      submitted,
+      concluded: totals.grandTotal,
+      lyConcluded: lyTotals.grandTotal,
+      changePct: pctChange(totals.grandTotal, lyTotals.grandTotal),
+      target,
+      pct,
+    });
+  }
+
+  const totalConcluded = rows.reduce((s, r) => s + r.concluded, 0);
+  const totalLyConcluded = rows.reduce((s, r) => s + r.lyConcluded, 0);
+  const totalSubmitted = rows.reduce((s, r) => s + r.submitted, 0);
+  const targets = rows.map((r) => r.target).filter((t) => t !== null);
+  const totalTarget = targets.length ? targets.reduce((s, t) => s + t, 0) : null;
+  const totalPct = totalTarget ? (totalConcluded / totalTarget) * 100 : null;
+
+  return {
+    fiscalYear: fyLabel,
+    previousFiscalYear: prevFyLabel,
+    rows,
+    total: {
+      submitted: totalSubmitted,
+      concluded: totalConcluded,
+      lyConcluded: totalLyConcluded,
+      changePct: pctChange(totalConcluded, totalLyConcluded),
+      target: totalTarget,
+      pct: totalPct,
+    },
+  };
+}
+
 module.exports = {
   getBounds,
   computeTotals,
@@ -407,5 +485,6 @@ module.exports = {
   getGlobalObjective,
   getTrend,
   getRecentActivity,
+  getMonthlySalesTable,
   fiscalYearLabel,
 };

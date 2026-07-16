@@ -121,6 +121,31 @@
           </aside>
         </div>
 
+        <section class="card table-card">
+          <div class="card-header">
+            <h2>Ventes par mois <span class="muted">(<span id="monthlySalesFyCur">—</span> vs <span id="monthlySalesFyPrev">—</span>)</span></h2>
+          </div>
+          <div class="table-scroll">
+            <table class="rep-table" id="monthlySalesTable">
+              <thead>
+                <tr>
+                  <th>Mois</th>
+                  <th>$ Soumis</th>
+                  <th>$ Conclu</th>
+                  <th>% vs LY</th>
+                  <th>$ Objectif</th>
+                  <th>% Atteinte</th>
+                </tr>
+              </thead>
+              <tbody id="monthlySalesTableBody"></tbody>
+            </table>
+          </div>
+          <p class="muted small table-footnote">
+            $ Conclu = Confirmé + Shopify (même définition que les grandes cartes). % vs LY = variation vs le même mois l'an dernier.
+            % Atteinte — vert ≥ 100%, jaune 75-99%, rouge &lt; 75%.
+          </p>
+        </section>
+
         <section class="card social-section">
           <div class="card-header">
             <h2>Réseaux sociaux</h2>

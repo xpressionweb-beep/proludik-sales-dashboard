@@ -61,6 +61,10 @@ router.get('/rep-conversion-summary', (req, res) => {
   res.json(aggregate.getRepConversionSummary());
 });
 
+router.get('/monthly-sales-table', (req, res) => {
+  res.json(aggregate.getMonthlySalesTable());
+});
+
 router.get('/trend', (req, res) => {
   const type = ['week', 'month', 'year'].includes(req.query.card) ? req.query.card : 'week';
   res.json(aggregate.getTrend(type));

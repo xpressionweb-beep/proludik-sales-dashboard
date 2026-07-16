@@ -26,5 +26,22 @@
   "global": {
     "_comment": "Objectif annuel global de l'entreprise (carte 'Objectif annuel' du dashboard) - chiffre reel fourni par le client, independant de la somme des objectifs individuels ci-dessus.",
     "2025-2026": 3325000
+  },
+  "monthly": {
+    "_comment": "Objectifs $ mensuels (tableau 'Ventes par mois') - cle = numero du mois (1-12, ex: '10' = octobre). Valeurs 2025-2026 reprises du fichier de stats manuel d'Isabelle (total 650 002$, deja verifie). A ajuster librement au besoin, pas de redemarrage requis.",
+    "2025-2026": {
+      "10": 27330,
+      "11": 49470,
+      "12": 30477,
+      "1": 93734,
+      "2": 39006,
+      "3": 24502,
+      "4": 50463,
+      "5": 121294,
+      "6": 107882,
+      "7": 39005,
+      "8": 48151,
+      "9": 18688
+    }
   }
 }
