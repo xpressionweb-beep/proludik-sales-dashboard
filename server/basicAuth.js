@@ -11,12 +11,23 @@ function safeEqual(a, b) {
   return crypto.timingSafeEqual(hash(a), hash(b));
 }
 
+// Chemins publics: la page de confirmation (ouverte depuis un lien de
+// notification Pushover sur le telephone du destinataire) et ses deux
+// routes API ne doivent PAS exiger les identifiants du dashboard, sinon
+// l'employe se retrouve avec une demande de login qu'il n'a pas.
+const PUBLIC_PATHS = [/^\/confirm\.html$/, /^\/api\/notify\/[^/]+\/(status|ack)$/];
+
+function isPublicPath(path) {
+  return PUBLIC_PATHS.some((re) => re.test(path));
+}
+
 // Protection HTTP Basic Auth sur tout le dashboard (pages statiques +
 // routes API), activee uniquement quand DASHBOARD_USER et
 // DASHBOARD_PASSWORD sont tous les deux configures (config.auth.enabled) -
 // pour ne jamais bloquer le developpement local par defaut.
 function basicAuth(req, res, next) {
   if (!config.auth.enabled) return next();
+  if (isPublicPath(req.path)) return next();
 
   const header = req.headers.authorization || '';
   const [scheme, encoded] = header.split(' ');
