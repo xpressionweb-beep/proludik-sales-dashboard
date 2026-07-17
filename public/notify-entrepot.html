@@ -134,6 +134,7 @@
 
 <script>
   const API_BASE = window.location.origin;
+  const PENDING_KEY = 'proludik_pending_notif';
 
   const quickMessages = [
     "Client pour ramassage de jeux",
@@ -167,17 +168,17 @@
     const recipient = document.getElementById('recipient').value;
     const message = document.getElementById('message').value.trim();
     const btn = document.getElementById('sendBtn');
-    const status = document.getElementById('status');
+    const statusEl = document.getElementById('status');
 
     if (!message) {
-      status.className = 'status error';
-      status.textContent = 'Écris un message avant d\'envoyer.';
+      statusEl.className = 'status error';
+      statusEl.textContent = 'Écris un message avant d\'envoyer.';
       return;
     }
 
     btn.disabled = true;
     btn.textContent = 'Envoi...';
-    status.className = 'status';
+    statusEl.className = 'status';
 
     try {
       const res = await fetch(`${API_BASE}/api/notify`, {
@@ -188,17 +189,20 @@
       const data = await res.json();
 
       if (data.success) {
-        status.className = 'status success';
-        status.textContent = '✅ Message envoyé! En attente de confirmation...';
+        statusEl.className = 'status success';
+        statusEl.textContent = '✅ Message envoyé! En attente de confirmation...';
         document.getElementById('message').value = '';
-        if (data.id) watchAck(data.id);
+        if (data.id) {
+          localStorage.setItem(PENDING_KEY, data.id);
+          watchAck(data.id);
+        }
       } else {
-        status.className = 'status error';
-        status.textContent = '❌ ' + (data.error || 'Erreur inconnue');
+        statusEl.className = 'status error';
+        statusEl.textContent = '❌ ' + (data.error || 'Erreur inconnue');
       }
     } catch (e) {
-      status.className = 'status error';
-      status.textContent = '❌ Impossible de contacter le serveur';
+      statusEl.className = 'status error';
+      statusEl.textContent = '❌ Impossible de contacter le serveur';
     } finally {
       btn.disabled = false;
       btn.textContent = 'Envoyer';
@@ -206,26 +210,50 @@
   }
 
   function watchAck(id) {
+    const statusEl = document.getElementById('status');
     const maxTries = 40; // ~10 minutes à 15s d'intervalle
     let tries = 0;
-    const interval = setInterval(async () => {
+
+    async function check() {
       tries++;
       try {
         const res = await fetch(`${API_BASE}/api/notify/${id}/status`);
+        if (!res.ok) throw new Error('introuvable');
         const data = await res.json();
         if (data.seen) {
           clearInterval(interval);
+          localStorage.removeItem(PENDING_KEY);
           const time = new Date(data.ackAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
-          status.className = 'status success';
-          status.textContent = `✅ Vu par ${data.recipientLabel} à ${time}`;
+          statusEl.className = 'status success';
+          statusEl.textContent = `✅ Vu par ${data.recipientLabel} à ${time}`;
+          return;
         }
-      } catch (e) { /* on réessaie au prochain intervalle */ }
-      if (tries >= maxTries) clearInterval(interval);
-    }, 15000);
+        statusEl.className = 'status success';
+        statusEl.textContent = '✅ Message envoyé! En attente de confirmation...';
+      } catch (e) {
+        // notif introuvable (expirée du cote serveur) — on arrete de suivre
+        clearInterval(interval);
+        localStorage.removeItem(PENDING_KEY);
+      }
+      if (tries >= maxTries) {
+        clearInterval(interval);
+        localStorage.removeItem(PENDING_KEY);
+      }
+    }
+
+    check();
+    const interval = setInterval(check, 15000);
+  }
+
+  // Reprend le suivi d'un message envoyé avant un rafraîchissement de page
+  function resumePendingWatch() {
+    const id = localStorage.getItem(PENDING_KEY);
+    if (id) watchAck(id);
   }
 
   loadRecipients();
   renderQuickButtons();
+  resumePendingWatch();
 </script>
 
 </body>
