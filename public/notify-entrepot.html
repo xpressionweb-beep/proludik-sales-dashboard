@@ -189,8 +189,9 @@
 
       if (data.success) {
         status.className = 'status success';
-        status.textContent = '✅ Message envoyé!';
+        status.textContent = '✅ Message envoyé! En attente de confirmation...';
         document.getElementById('message').value = '';
+        if (data.id) watchAck(data.id);
       } else {
         status.className = 'status error';
         status.textContent = '❌ ' + (data.error || 'Erreur inconnue');
@@ -202,6 +203,25 @@
       btn.disabled = false;
       btn.textContent = 'Envoyer';
     }
+  }
+
+  function watchAck(id) {
+    const maxTries = 40; // ~10 minutes à 15s d'intervalle
+    let tries = 0;
+    const interval = setInterval(async () => {
+      tries++;
+      try {
+        const res = await fetch(`${API_BASE}/api/notify/${id}/status`);
+        const data = await res.json();
+        if (data.seen) {
+          clearInterval(interval);
+          const time = new Date(data.ackAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+          status.className = 'status success';
+          status.textContent = `✅ Vu par ${data.recipientLabel} à ${time}`;
+        }
+      } catch (e) { /* on réessaie au prochain intervalle */ }
+      if (tries >= maxTries) clearInterval(interval);
+    }, 15000);
   }
 
   loadRecipients();

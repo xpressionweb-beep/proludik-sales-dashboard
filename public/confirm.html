@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proludik - Confirmer</title>
+<style>
+  :root {
+    --navy: #1a2744;
+    --red: #c8102e;
+    --bg: #f4f5f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Barlow', Arial, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+  .card {
+    background: white;
+    max-width: 420px;
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+    margin-top: 40px;
+  }
+  .header {
+    background: var(--navy);
+    color: white;
+    padding: 20px 24px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .body {
+    padding: 24px;
+    text-align: center;
+  }
+  .message-box {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 15px;
+    color: var(--navy);
+    text-align: left;
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+  }
+  .confirm-btn {
+    width: 100%;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .confirm-btn.done { background: #1a7a3d; }
+  .status {
+    margin-top: 14px;
+    font-size: 14px;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h1>Message reçu</h1>
+  </div>
+  <div class="body">
+    <div class="message-box" id="messageBox">Chargement...</div>
+    <button class="confirm-btn" id="confirmBtn" onclick="confirmSeen()" disabled>J'ai vu ✓</button>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = window.location.origin;
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  const btn = document.getElementById('confirmBtn');
+  const status = document.getElementById('status');
+  const messageBox = document.getElementById('messageBox');
+
+  async function loadNotif() {
+    if (!id) {
+      messageBox.textContent = 'Lien invalide.';
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/notify/${id}/status`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      messageBox.textContent = data.message;
+      if (data.seen) {
+        setDone(data.ackAt);
+      } else {
+        btn.disabled = false;
+      }
+    } catch (e) {
+      messageBox.textContent = 'Message introuvable (peut-être expiré).';
+    }
+  }
+
+  function setDone(ackAt) {
+    btn.disabled = true;
+    btn.classList.add('done');
+    btn.textContent = 'Confirmé ✓';
+    const time = ackAt ? new Date(ackAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : '';
+    status.textContent = time ? `Vu à ${time}` : 'Déjà confirmé';
+  }
+
+  async function confirmSeen() {
+    btn.disabled = true;
+    btn.textContent = 'Envoi...';
+    try {
+      const res = await fetch(`${API_BASE}/api/notify/${id}/ack`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setDone(data.ackAt);
+      } else {
+        status.textContent = 'Erreur, réessaie.';
+        btn.disabled = false;
+        btn.textContent = "J'ai vu ✓";
+      }
+    } catch (e) {
+      status.textContent = 'Impossible de contacter le serveur.';
+      btn.disabled = false;
+      btn.textContent = "J'ai vu ✓";
+    }
+  }
+
+  loadNotif();
+</script>
+
+</body>
+</html>

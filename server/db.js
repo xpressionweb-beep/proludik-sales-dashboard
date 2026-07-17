@@ -4,6 +4,7 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const SALES_FILE = path.join(DATA_DIR, 'sales.json');
 const META_FILE = path.join(DATA_DIR, 'meta.json');
+const NOTIFS_FILE = path.join(DATA_DIR, 'notifs.json');
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -99,6 +100,34 @@ function resetSourceMeta(source) {
   return meta;
 }
 
+// --- Notifications (accusé de réception) ---
+
+function getAllNotifs() {
+  return readJson(NOTIFS_FILE, []);
+}
+
+function createNotif(notif) {
+  const notifs = getAllNotifs();
+  notifs.push(notif);
+  // Garde seulement les 200 dernières pour ne pas grossir indéfiniment
+  const trimmed = notifs.slice(-200);
+  writeJsonAtomic(NOTIFS_FILE, trimmed);
+  return notif;
+}
+
+function getNotif(id) {
+  return getAllNotifs().find((n) => n.id === id) || null;
+}
+
+function ackNotif(id) {
+  const notifs = getAllNotifs();
+  const target = notifs.find((n) => n.id === id);
+  if (!target) return null;
+  if (!target.ackAt) target.ackAt = new Date().toISOString();
+  writeJsonAtomic(NOTIFS_FILE, notifs);
+  return target;
+}
+
 module.exports = {
   getAllSales,
   upsertSales,
@@ -106,4 +135,7 @@ module.exports = {
   getMeta,
   setSourceMeta,
   resetSourceMeta,
+  createNotif,
+  getNotif,
+  ackNotif,
 };
