@@ -1,4 +1,5 @@
 const XLSX = require('xlsx');
+const crypto = require('crypto');
 const config = require('../config');
 
 // Connecteur "de secours": au lieu d'appeler les APIs IO/Shopify en direct
@@ -55,16 +56,154 @@ function normalizeIoType(raw) {
 
 function buildDownloadUrl(shareUrl) {
   // Astuce lien de partage OneDrive/SharePoint: ajouter "download=1" force
-  // le telechargement direct du binaire plutot que la page de previsualisation
-  // - fonctionne avec un lien "personnes de Proludik" sans OAuth/app Azure,
-  // tant que le serveur qui appelle est deja "connu" du tenant (sinon voir
-  // README: passer par Microsoft Graph + app registration).
+  // le telechargement direct du binaire plutot que la page de previsualisation.
+  // NE FONCTIONNE PAS pour un lien SharePoint "Personnes de l'organisation"
+  // appele sans session navigateur (HTTP 403 confirme en prod le 20 juillet
+  // 2026) - laisse en fallback seulement si Azure AD n'est pas configure,
+  // pour ne pas casser un usage OneDrive personnel "Anyone with the link"
+  // ou l'astuce fonctionne encore.
   const url = new URL(shareUrl);
   url.searchParams.set('download', '1');
   return url.toString();
 }
 
+// --- Auth applicative Microsoft Graph (client credentials) ---------------
+// Voir README section "Import Excel (SharePoint via Graph API)" pour la
+// creation de l'app registration Azure AD (permission Sites.Read.All,
+// consentement admin) qui fournit AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET.
+let tokenCache = null; // { token, expiresAt }
+
+async function getGraphToken() {
+  if (tokenCache && tokenCache.expiresAt - Date.now() > 60 * 1000) {
+    return tokenCache.token;
+  }
+  const { tenantId, clientId, clientSecret } = config.excel.azure;
+  const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    scope: 'https://graph.microsoft.com/.default',
+    grant_type: 'client_credentials',
+  });
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+    signal: AbortSignal.timeout(config.excel.httpTimeoutMs),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Authentification Graph API (Azure AD): HTTP ${res.status} ${detail}`.trim());
+  }
+  const data = await res.json();
+  tokenCache = { token: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+  return tokenCache.token;
+}
+
+// Un lien de partage classique (https://proludik.sharepoint.com/:x:/...) se
+// convertit en "shareId" Graph via cet encodage documente par Microsoft:
+// https://learn.microsoft.com/graph/api/shares-get
+function encodeShareUrl(shareUrl) {
+  const base64 = Buffer.from(shareUrl, 'utf8').toString('base64');
+  const base64Url = base64.replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
+  return `u!${base64Url}`;
+}
+
+async function downloadBufferViaGraph(shareUrl) {
+  const token = await getGraphToken();
+  const shareId = encodeShareUrl(shareUrl);
+  const res = await fetch(`https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/content`, {
+    headers: { Authorization: `Bearer ${token}` },
+    redirect: 'follow',
+    signal: AbortSignal.timeout(config.excel.httpTimeoutMs),
+  });
+  if (!res.ok) {
+    throw new Error(`Téléchargement fichier Excel (Graph API): HTTP ${res.status}`);
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
+// --- Auth compte de service Google Drive (JWT signe maison, pas de lib) --
+// Voir README section "Import Excel (Google Drive)". Alternative a Azure
+// AD/Graph quand aucun admin Microsoft 365 n'est disponible pour le
+// consentement admin: un compte de service Google n'a besoin d'aucune
+// approbation d'organisation - il suffit de partager LE FICHIER (pas tout
+// le Drive) avec l'adresse e-mail du compte de service, comme un partage
+// normal avec un collegue.
+function base64url(input) {
+  return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function buildGoogleAssertion(serviceAccount) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claims = {
+    iss: serviceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/drive.readonly',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  };
+  const unsigned = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(claims))}`;
+  const signature = crypto.sign('RSA-SHA256', Buffer.from(unsigned), serviceAccount.private_key);
+  const sig64 = signature.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${unsigned}.${sig64}`;
+}
+
+let driveTokenCache = null; // { token, expiresAt }
+
+async function getGoogleDriveToken() {
+  if (driveTokenCache && driveTokenCache.expiresAt - Date.now() > 60 * 1000) {
+    return driveTokenCache.token;
+  }
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(config.excel.googleDrive.serviceAccountKey);
+  } catch {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY invalide (doit être le contenu JSON complet du fichier de clé).');
+  }
+  const assertion = buildGoogleAssertion(serviceAccount);
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion,
+    }),
+    signal: AbortSignal.timeout(config.excel.httpTimeoutMs),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Authentification Google Drive (compte de service): HTTP ${res.status} ${detail}`.trim());
+  }
+  const data = await res.json();
+  driveTokenCache = { token: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+  return driveTokenCache.token;
+}
+
+async function downloadBufferViaGoogleDrive() {
+  const token = await getGoogleDriveToken();
+  const { fileId } = config.excel.googleDrive;
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${token}` },
+    redirect: 'follow',
+    signal: AbortSignal.timeout(config.excel.httpTimeoutMs),
+  });
+  if (!res.ok) {
+    throw new Error(`Téléchargement fichier Excel (Google Drive): HTTP ${res.status}`);
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
 async function downloadBuffer(shareUrl) {
+  if (config.excel.googleDrive.configured) {
+    return downloadBufferViaGoogleDrive();
+  }
+  if (config.excel.azure.configured) {
+    return downloadBufferViaGraph(shareUrl);
+  }
+  // Fallback: ancien comportement (fonctionne seulement pour un lien
+  // OneDrive personnel public, pas pour un lien SharePoint organisationnel).
   const res = await fetch(buildDownloadUrl(shareUrl), {
     redirect: 'follow',
     signal: AbortSignal.timeout(config.excel.httpTimeoutMs),
@@ -94,8 +233,10 @@ const CACHE_MS = 60 * 1000;
 
 async function loadRows() {
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.rows;
-  if (!config.excel.shareUrl) {
-    throw new Error('EXCEL_SHARE_URL non configuré (voir .env.example).');
+  if (!config.excel.googleDrive.configured && !config.excel.azure.configured && !config.excel.shareUrl) {
+    throw new Error(
+      'Aucune source Excel configurée (GOOGLE_SERVICE_ACCOUNT_KEY+GOOGLE_DRIVE_FILE_ID, ou AZURE_*, ou EXCEL_SHARE_URL - voir .env.example).'
+    );
   }
   const buf = await downloadBuffer(config.excel.shareUrl);
   const rows = parseRowsFromBuffer(buf);
