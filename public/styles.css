@@ -440,3 +440,61 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 
 .muted { color: var(--text-secondary); }
 .small { font-size: 12px; }
+
+/* ---------- Mobile (≤ 700px) ---------- */
+
+@media (max-width: 700px) {
+  body { font-size: 13px; }
+
+  /* La sidebar 220px fixe est ce qui écrase le contenu sur téléphone :
+     on passe le layout en une seule colonne et la sidebar devient un
+     bandeau horizontal compact en haut plutôt qu'une colonne latérale. */
+  .app-shell { grid-template-columns: 1fr; }
+
+  .sidebar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    gap: 10px;
+    overflow-x: auto;
+  }
+  .sidebar-logo { flex: none; }
+  .brand-mark { height: 24px; }
+
+  /* Les items de nav sont presque tous "bientôt disponible" - inutile de
+     leur donner toute une colonne sur un petit écran, on les cache et on
+     garde juste le logo + la tagline dans le bandeau. */
+  .nav-list { display: none; }
+  .sidebar-footer { border-top: none; padding-top: 0; text-align: right; }
+  .sidebar-tagline { font-size: 11px; }
+  .sidebar-subtagline { display: none; }
+
+  .topbar { padding: 12px 14px; gap: 8px; }
+  .topbar-title { font-size: 14px; white-space: normal; }
+  .topbar-fiscal { gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .fiscal-label { display: none; }
+  .io-mode-btn { padding: 6px 10px; font-size: 11px; }
+
+  main { padding: 14px 12px 28px; gap: 14px; }
+
+  .quick-metrics { grid-template-columns: repeat(2, 1fr); padding: 12px; }
+  .big-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .big-card { padding: 12px 14px; }
+  .big-card-value { font-size: 21px; }
+
+  .counters, #divisions { grid-template-columns: 1fr 1fr !important; gap: 10px; }
+
+  .card { padding: 14px 14px; }
+  .content-grid { gap: 10px; }
+
+  /* Les tableaux restent en scroll horizontal (déjà géré par
+     .table-scroll) plutôt que de casser la mise en page. */
+  .rep-table th, .rep-table td { padding: 8px 6px; font-size: 11.5px; }
+
+  .page-footer { font-size: 11px; gap: 6px; }
+}
+
+@media (max-width: 420px) {
+  .quick-metrics, .big-cards, .counters, #divisions { grid-template-columns: 1fr; }
+}
