@@ -83,7 +83,37 @@ module.exports = {
     initialSyncDays: parseInt(process.env.EXCEL_INITIAL_SYNC_DAYS, 10) || 730,
     httpTimeoutMs: parseInt(process.env.EXCEL_HTTP_TIMEOUT_MS, 10) || 30000,
     get configured() {
-      return Boolean(this.shareUrl);
+      return Boolean(this.shareUrl || this.googleDrive.configured || this.azure.configured);
+    },
+    // Compte de service Google Drive (voir README section "Import Excel
+    // (Google Drive)") - alternative a Azure/Graph ne necessitant AUCUNE
+    // approbation d'admin Microsoft 365: il suffit de partager le fichier
+    // (pas tout le Drive) avec l'adresse e-mail du compte de service,
+    // comme un partage normal. serviceAccountKey = contenu JSON complet du
+    // fichier de cle telecharge sur Google Cloud Console (coller tel quel
+    // dans la variable d'environnement, Render accepte le multi-ligne).
+    googleDrive: {
+      serviceAccountKey: process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '',
+      fileId: process.env.GOOGLE_DRIVE_FILE_ID || '',
+      get configured() {
+        return Boolean(this.serviceAccountKey && this.fileId);
+      },
+    },
+    // App registration Azure AD (permission applicative Graph API
+    // "Sites.Read.All", consentement admin requis) - seule facon fiable de
+    // telecharger le fichier sans authentification interactive: un lien de
+    // partage SharePoint anonyme repond HTTP 403 a une requete serveur sans
+    // session navigateur, meme configure "Personnes de l'organisation".
+    // Si ces 3 variables sont presentes, EXCEL_SHARE_URL est resolu via
+    // Microsoft Graph (/shares/{id}/driveItem/content) au lieu d'un fetch
+    // direct - voir README section "Import Excel (SharePoint via Graph API)".
+    azure: {
+      tenantId: process.env.AZURE_TENANT_ID || '',
+      clientId: process.env.AZURE_CLIENT_ID || '',
+      clientSecret: process.env.AZURE_CLIENT_SECRET || '',
+      get configured() {
+        return Boolean(this.tenantId && this.clientId && this.clientSecret);
+      },
     },
   },
 
