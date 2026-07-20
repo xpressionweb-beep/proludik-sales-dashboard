@@ -184,13 +184,17 @@ async function getGoogleDriveToken() {
 async function downloadBufferViaGoogleDrive() {
   const token = await getGoogleDriveToken();
   const { fileId } = config.excel.googleDrive;
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-    headers: { Authorization: `Bearer ${token}` },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(config.excel.httpTimeoutMs),
-  });
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(config.excel.httpTimeoutMs),
+    }
+  );
   if (!res.ok) {
-    throw new Error(`Téléchargement fichier Excel (Google Drive): HTTP ${res.status}`);
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Téléchargement fichier Excel (Google Drive): HTTP ${res.status} ${detail}`.trim());
   }
   return Buffer.from(await res.arrayBuffer());
 }
