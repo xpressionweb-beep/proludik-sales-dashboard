@@ -1,7 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+// DATA_DIR permet de pointer vers un disque persistant (ex: Render Disk
+// monté sur un chemin fixe) plutôt que le dossier data/ du repo, qui vit
+// sur le système de fichiers éphémère du service et est effacé à chaque
+// redéploiement - sans ça, tout l'historique synchronisé (data/sales.json)
+// repart de zéro à chaque push. Fallback sur l'ancien chemin si non défini.
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const SALES_FILE = path.join(DATA_DIR, 'sales.json');
 const META_FILE = path.join(DATA_DIR, 'meta.json');
 const NOTIFS_FILE = path.join(DATA_DIR, 'notifs.json');
