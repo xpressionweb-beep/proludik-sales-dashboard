@@ -222,6 +222,19 @@ router.all('/diagnostics/shopify-token-refresh', async (req, res) => {
   }
 });
 
+// Diagnostic: en-têtes réelles du fichier Excel synchronisé + échantillon
+// de "Date création" brute (voir excelStats.debugExcelHeaders) - confirme
+// si le nom de colonne attendu par le code correspond bien à celui du
+// fichier source, sans devoir l'ouvrir/le parcourir à l'oeil.
+router.get('/diagnostics/excel-headers', async (req, res) => {
+  try {
+    const info = await excelStats.debugExcelHeaders();
+    res.json(info);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 // Diagnostic: IP sortante du serveur, a fournir a un fournisseur (ex.
 // rental.software) en cas de blocage par IP. Loggee aussi au demarrage.
 router.get('/diagnostics/ip', async (req, res) => {

@@ -391,10 +391,50 @@ function parseUploadedWorkbook(buf) {
   return buildRecords(rows);
 }
 
+// Diagnostic (voir GET /api/diagnostics/excel-headers dans routes/api.js):
+// expose les en-têtes réelles du fichier synchronisé et un échantillon de
+// valeurs brutes de "Date création", sans devoir naviguer le fichier Excel
+// à l'oeil. Sert à confirmer/infirmer que le nom de colonne attendu par le
+// code (`row['Date création']`) correspond bien à celui du fichier source -
+// si la clé n'existe pas telle quelle (accent/espace/casse différents), la
+// valeur est toujours `undefined`, `toIso()` retourne `null`, et
+// `createdDate` retombe silencieusement sur `orderDate` (date d'événement)
+// pour CHAQUE ligne - ce qui expliquerait "Nouveaux dossiers"/"Semaine
+// dernière" bloqués à 0 même avec l'historique complet du fichier chargé.
+async function debugExcelHeaders() {
+  const rows = await loadRows();
+  const headers = rows.length ? Object.keys(rows[0]) : [];
+
+  let validDateCreation = 0;
+  let invalidOrMissingDateCreation = 0;
+  for (const row of rows) {
+    if (toIso(row['Date création'])) validDateCreation += 1;
+    else invalidOrMissingDateCreation += 1;
+  }
+
+  const sample = rows.slice(0, 5).map((row) => ({
+    'No Contrat': row['No Contrat'],
+    Date: row['Date'],
+    'Date (type)': row['Date'] instanceof Date ? 'Date' : typeof row['Date'],
+    'Date création': row['Date création'],
+    'Date création (type)': row['Date création'] instanceof Date ? 'Date' : typeof row['Date création'],
+    Classe: row['Classe'],
+  }));
+
+  return {
+    totalRows: rows.length,
+    headers,
+    dateCreationColumnFound: headers.includes('Date création'),
+    dateCreation: { valid: validDateCreation, invalidOrMissing: invalidOrMissingDateCreation },
+    sample,
+  };
+}
+
 module.exports = {
   fetchIoSales,
   fetchShopifySales,
   parseUploadedWorkbook,
+  debugExcelHeaders,
   IO_SOURCE,
   SHOPIFY_SOURCE,
   IO_TYPES,
