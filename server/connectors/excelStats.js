@@ -54,6 +54,20 @@ function normalizeIoType(raw) {
   return 'Autre';
 }
 
+// Succursale (colonne "Classe" du fichier) - "Commun" regroupe les ventes
+// boutique/inventaire partagé, pas rattachées à une succursale precise
+// (toujours Type=Vente cote donnees). Meme approche que normalizeIoType:
+// fallback sur "Commun" si la valeur est vide ou ne matche aucune des
+// succursales connues, plutot que de laisser passer une valeur brute
+// imprevue jusqu'au dashboard.
+function normalizeBranch(raw) {
+  const v = (raw || '').toString().trim().toLowerCase();
+  if (v.startsWith('québec') || v.startsWith('quebec')) return 'Québec';
+  if (v.startsWith('st-bruno') || v.startsWith('st bruno') || v.startsWith('saint-bruno')) return 'St-Bruno';
+  if (v.startsWith('commun')) return 'Commun';
+  return 'Commun';
+}
+
 function buildDownloadUrl(shareUrl) {
   // Astuce lien de partage OneDrive/SharePoint: ajouter "download=1" force
   // le telechargement direct du binaire plutot que la page de previsualisation.
@@ -329,6 +343,7 @@ function buildRecords(rows, { sinceIso } = {}) {
       orderDate,
       createdDate,
       type: normalizeIoType(row['Type']),
+      branch: normalizeBranch(row['Classe']),
     });
   }
 

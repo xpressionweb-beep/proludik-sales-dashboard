@@ -255,6 +255,39 @@ async function renderBigCards() {
     objectiveCard;
 }
 
+// ---------- Comparaison Québec vs St-Bruno ----------
+// Carte "Québec vs St-Bruno" (mois en cours, dossiers Confirmés) - voir
+// aggregate.getBranchComparison. 'Commun' (ventes boutique/inventaire
+// partagé, pas rattachées à une succursale) est affiché à part, exclu de la
+// barre et des pourcentages (qui comparent seulement Québec vs St-Bruno).
+async function renderBranchComparison() {
+  const data = await fetchJson('/api/branch-comparison');
+
+  const quebecPct = data.quebecPct !== null ? data.quebecPct : 0;
+  const stBrunoPct = data.stBrunoPct !== null ? data.stBrunoPct : 0;
+
+  document.getElementById('branchComparison').innerHTML = `
+    <div class="branch-card">
+      <div class="branch-blocks">
+        <div class="branch-block">
+          <div class="branch-block-label"><span class="branch-block-dot quebec"></span>Québec</div>
+          <div class="branch-block-value">${money.format(data.quebec)}</div>
+          <div class="branch-block-pct">${data.quebecPct !== null ? data.quebecPct.toFixed(0) + '%' : '—'} du total</div>
+        </div>
+        <div class="branch-block">
+          <div class="branch-block-label"><span class="branch-block-dot st-bruno"></span>St-Bruno</div>
+          <div class="branch-block-value">${money.format(data.stBruno)}</div>
+          <div class="branch-block-pct">${data.stBrunoPct !== null ? data.stBrunoPct.toFixed(0) + '%' : '—'} du total</div>
+        </div>
+      </div>
+      <div class="branch-bar">
+        <div class="branch-bar-quebec" style="width:${quebecPct}%"></div>
+        <div class="branch-bar-st-bruno" style="width:${stBrunoPct}%"></div>
+      </div>
+      <div class="branch-commun">Commun (boutique/inventaire partagé) : <strong>${money.format(data.commun)}</strong> — non inclus dans la comparaison ci-dessus</div>
+    </div>`;
+}
+
 // ---------- Compteurs de statut ----------
 // Confirmés/Soumissions/VRF-Contrats: comptes sur une fenetre glissante de
 // 7 jours (pas l'annee financiere) - voir getStatusCounts7d() cote
@@ -615,6 +648,7 @@ async function initIoModeToggle() {
 async function loadAll() {
   await Promise.all([
     renderBigCards(),
+    renderBranchComparison(),
     renderNewDossiers(),
     renderDivisions(),
     renderRepTable(),

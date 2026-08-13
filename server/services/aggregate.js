@@ -692,6 +692,35 @@ function getDivisionBreakdown(referenceDate = new Date()) {
   };
 }
 
+// Comparaison Québec vs St-Bruno (carte "Québec vs St-Bruno" du dashboard):
+// $ Confirmé du mois en cours par succursale (branch, voir
+// excelStats.normalizeBranch), Shopify exclu (pas de succursale). 'Commun'
+// (ventes boutique/inventaire partagé, pas rattachées à une succursale) est
+// retourné a part et exclu de `total`/des pourcentages - comparer Québec vs
+// St-Bruno n'a de sens que sur ce qui leur est effectivement attribué.
+function getBranchComparison(referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const { start, end, label } = getBounds('month', 0, referenceDate);
+
+  let quebec = 0;
+  let stBruno = 0;
+  let commun = 0;
+
+  for (const sale of sales) {
+    if (sale.source !== 'io' || sale.status !== 'Confirmé') continue;
+    if (!inRange(sale.orderDate, start, end)) continue;
+    if (sale.branch === 'Québec') quebec += sale.amount;
+    else if (sale.branch === 'St-Bruno') stBruno += sale.amount;
+    else commun += sale.amount;
+  }
+
+  const total = quebec + stBruno;
+  const quebecPct = total > 0 ? (quebec / total) * 100 : null;
+  const stBrunoPct = total > 0 ? (stBruno / total) * 100 : null;
+
+  return { label, quebec, stBruno, commun, total, quebecPct, stBrunoPct };
+}
+
 module.exports = {
   getBounds,
   computeTotals,
@@ -706,5 +735,6 @@ module.exports = {
   getMonthlySalesTable,
   getDivisionBreakdown,
   getNewDossiers7d,
+  getBranchComparison,
   fiscalYearLabel,
 };

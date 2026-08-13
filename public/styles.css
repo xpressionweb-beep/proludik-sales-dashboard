@@ -197,7 +197,7 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 
 .big-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 14px;
 }
 @media (max-width: 1100px) {
@@ -248,6 +248,37 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .goal-progress-fill.good { background: var(--good); }
 .goal-progress-text { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); }
 .goal-progress-text strong { color: var(--brand-red); font-size: 14px; }
+
+/* ---------- Comparaison Québec vs St-Bruno ---------- */
+
+.branch-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.branch-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.branch-block { display: flex; flex-direction: column; gap: 4px; }
+.branch-block-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); }
+.branch-block-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.branch-block-dot.quebec { background: var(--brand-navy); }
+.branch-block-dot.st-bruno { background: var(--brand-red); }
+.branch-block-value { font-size: 24px; font-weight: 800; }
+.branch-block-pct { font-size: 12px; color: var(--text-muted); }
+
+/* Barre bicolore proportionnelle au $ de chaque succursale (navy = Québec,
+   rouge = St-Bruno) - Commun n'y figure pas (voir getBranchComparison, exclu
+   du total comparé). */
+.branch-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--track); }
+.branch-bar-quebec { background: var(--brand-navy); }
+.branch-bar-st-bruno { background: var(--brand-red); }
+
+.branch-commun { font-size: 12px; color: var(--text-muted); }
 
 /* ---------- Status counters ---------- */
 

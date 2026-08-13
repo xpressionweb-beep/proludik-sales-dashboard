@@ -69,6 +69,10 @@ router.get('/divisions', (req, res) => {
   res.json(aggregate.getDivisionBreakdown());
 });
 
+router.get('/branch-comparison', (req, res) => {
+  res.json(aggregate.getBranchComparison());
+});
+
 router.get('/monthly-sales-table', (req, res) => {
   res.json(aggregate.getMonthlySalesTable());
 });
