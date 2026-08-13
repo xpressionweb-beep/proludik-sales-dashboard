@@ -399,6 +399,21 @@ function parseUploadedWorkbook(buf) {
 // meme "Nouveaux dossiers", qui pourtant ne filtre pas par statut), et le
 // detail des lignes dont "Date création" tombe dans les 14 derniers jours
 // (fenetre couverte par les cartes "Nouveaux dossiers"/"Semaine derniere").
+// Etendue (min/max) d'une colonne date du fichier, tous statuts confondus -
+// permet de voir jusqu'ou chaque colonne remonte reellement, sans devoir
+// scanner ligne par ligne a l'oeil.
+function dateColumnRange(rows, columnName) {
+  let min = null;
+  let max = null;
+  for (const row of rows) {
+    const iso = toIso(row[columnName]);
+    if (!iso) continue;
+    if (!min || iso < min) min = iso;
+    if (!max || iso > max) max = iso;
+  }
+  return { min, max };
+}
+
 function analyzeRowsForDebug(rows) {
   const headers = rows.length ? Object.keys(rows[0]) : [];
 
@@ -431,6 +446,16 @@ function analyzeRowsForDebug(rows) {
     }
   }
 
+  // Etendue des 3 colonnes de dates du fichier - permet de voir en un coup
+  // d'oeil si "Date création" est structurellement en retard par rapport a
+  // "Date" (evenement) et "Date signature" (les 2 autres colonnes de date
+  // disponibles), ou si TOUT le fichier est simplement perime.
+  const dateRanges = {
+    Date: dateColumnRange(rows, 'Date'),
+    'Date création': dateColumnRange(rows, 'Date création'),
+    'Date signature': dateColumnRange(rows, 'Date signature'),
+  };
+
   const sample = rows.slice(0, 5).map((row) => ({
     'No Contrat': row['No Contrat'],
     Date: row['Date'],
@@ -445,6 +470,7 @@ function analyzeRowsForDebug(rows) {
     headers,
     dateCreationColumnFound: headers.includes('Date création'),
     dateCreation: { valid: validDateCreation, invalidOrMissing: invalidOrMissingDateCreation },
+    dateRanges,
     statutSimplifieCounts: statutCounts,
     recentRows14d: { cutoff: new Date(recentCutoff).toISOString(), count: recentRows.length, rows: recentRows.slice(0, 30) },
     sample,
