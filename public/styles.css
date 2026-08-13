@@ -111,7 +111,7 @@ body {
 .sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.14); padding-top: 14px; }
 .sidebar-tagline { margin: 0; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; color: #fff; }
 .sidebar-tagline .accent { color: var(--brand-red); }
-.sidebar-subtagline { margin: 6px 0 0; font-size: 10px; color: rgba(255, 255, 255, 0.55); line-height: 1.5; letter-spacing: 0.3px; }
+.sidebar-subtagline { margin: 6px 0 0; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.55); line-height: 1.5; letter-spacing: 0.3px; }
 
 /* ---------- Header ---------- */
 
@@ -127,7 +127,7 @@ body {
   gap: 16px;
 }
 
-.topbar-datetime { display: flex; flex-direction: column; font-size: 12px; color: var(--text-secondary); }
+.topbar-datetime { display: flex; flex-direction: column; font-size: 13px; color: var(--text-secondary); }
 .topbar-date { font-weight: 700; letter-spacing: 0.5px; }
 .topbar-time { font-weight: 500; }
 
@@ -138,7 +138,7 @@ body {
 
 .topbar-fiscal { display: flex; align-items: center; gap: 14px; justify-self: end; color: var(--text-secondary); }
 .topbar-fiscal .nav-icon { width: 22px; height: 22px; color: var(--text-muted); }
-.fiscal-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.fiscal-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .fiscal-range { font-size: 13px; font-weight: 700; color: var(--text-primary); }
 
 .theme-toggle-btn {
@@ -154,7 +154,7 @@ body {
   display: flex; align-items: center; gap: 7px; flex: none;
   padding: 7px 14px; border-radius: 999px;
   background: var(--bg-card-alt); border: 1px solid var(--border-strong);
-  color: var(--good); font-size: 12px; font-weight: 700; letter-spacing: 0.2px;
+  color: var(--good); font-size: 13px; font-weight: 700; letter-spacing: 0.2px;
   cursor: pointer;
 }
 .io-mode-btn:hover { border-color: var(--brand-red); }
@@ -191,13 +191,13 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .qm-icon svg { width: 16px; height: 16px; }
 .qm-value { font-size: 17px; font-weight: 800; line-height: 1.1; }
 .qm-value.is-placeholder { font-size: 13px; font-weight: 600; color: var(--text-muted); }
-.qm-label { font-size: 11px; color: var(--text-secondary); }
+.qm-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 
 /* ---------- Big cards ---------- */
 
 .big-cards {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
 }
 @media (max-width: 1100px) {
@@ -217,18 +217,18 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 
 .big-card-title {
   display: flex; align-items: center; gap: 8px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
   color: var(--text-secondary);
 }
 .big-card-title .nav-icon { width: 16px; height: 16px; color: var(--brand-red); }
 
 .big-card-value { font-size: 26px; font-weight: 800; }
 
-.big-card-compare { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
-.compare-years { color: var(--text-muted); }
+.big-card-compare { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.compare-years { color: var(--text-muted); font-weight: 500; }
 .compare-years strong { color: var(--text-secondary); font-weight: 700; }
 
-.delta-badge { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 12px; }
+.delta-badge { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 13px; }
 .delta-badge.up { color: var(--good); }
 .delta-badge.down { color: var(--bad); }
 
@@ -240,16 +240,25 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 /* Numeros de semaine / mois affiches sous les cartes "Ce mois" et "Année
    financière" (voir getTrend cote serveur). */
 .sparkline-labels { display: flex; gap: 2px; margin-top: 2px; }
-.sparkline-labels span { flex: 1; text-align: center; font-size: 9px; color: var(--text-muted); white-space: nowrap; }
+.sparkline-labels span { flex: 1; text-align: center; font-size: 10.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
 .sparkline-labels span.is-current { color: var(--brand-red); font-weight: 700; }
 
 .goal-progress-track { height: 10px; border-radius: 5px; background: var(--track); overflow: hidden; }
 .goal-progress-fill { height: 100%; border-radius: 5px; background: var(--brand-red); }
 .goal-progress-fill.good { background: var(--good); }
-.goal-progress-text { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); }
+.goal-progress-text { display: flex; justify-content: space-between; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
 .goal-progress-text strong { color: var(--brand-red); font-size: 14px; }
 
 /* ---------- Comparaison Québec vs St-Bruno ---------- */
+
+#branchComparison {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (max-width: 700px) {
+  #branchComparison { grid-template-columns: 1fr; }
+}
 
 .branch-card {
   background: var(--bg-card);
@@ -262,14 +271,15 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
   gap: 12px;
 }
 
+.branch-card-title { font-size: 13px; font-weight: 700; letter-spacing: 0.3px; color: var(--text-secondary); }
 .branch-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .branch-block { display: flex; flex-direction: column; gap: 4px; }
-.branch-block-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); }
+.branch-block-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); }
 .branch-block-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .branch-block-dot.quebec { background: var(--brand-navy); }
 .branch-block-dot.st-bruno { background: var(--brand-red); }
 .branch-block-value { font-size: 24px; font-weight: 800; }
-.branch-block-pct { font-size: 12px; color: var(--text-muted); }
+.branch-block-pct { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 
 /* Barre bicolore proportionnelle au $ de chaque succursale (navy = Québec,
    rouge = St-Bruno) - Commun n'y figure pas (voir getBranchComparison, exclu
@@ -278,7 +288,7 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .branch-bar-quebec { background: var(--brand-navy); }
 .branch-bar-st-bruno { background: var(--brand-red); }
 
-.branch-commun { font-size: 12px; color: var(--text-muted); }
+.branch-commun { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 
 /* ---------- Status counters ---------- */
 
@@ -309,10 +319,10 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
   padding: 14px 18px;
   display: flex; flex-direction: column; gap: 6px;
 }
-.counter-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); }
+.counter-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); }
 .counter-title .nav-icon { width: 16px; height: 16px; color: var(--brand-red); }
 .counter-value { font-size: 24px; font-weight: 800; }
-.counter-compare { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.counter-compare { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
 
 /* Palier vert/jaune/rouge (>=100% / 75-99% / <75%) - reutilise sur les 4
    cartes compteurs et sur le Score des representants (voir tierClass()
@@ -344,12 +354,12 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 }
 .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
 .card-header h2 { margin: 0; font-size: 15px; font-weight: 700; }
-.card-header h2 .muted { font-weight: 500; font-size: 12px; }
+.card-header h2 .muted { font-weight: 600; font-size: 13px; }
 
 .table-scroll { overflow-x: auto; }
-.rep-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.rep-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .rep-table th {
-  text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px;
+  text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px;
   color: var(--text-muted); font-weight: 700; padding: 8px 7px; border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
@@ -366,7 +376,7 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .table-group-header { text-align: center; background: var(--bg-subtle, rgba(0,0,0,0.03)); border-bottom: 1px solid var(--border); }
 .io-subtotal-cell { border-left: 1px dashed var(--border); font-weight: 600; }
 .section-heading { font-size: 15px; font-weight: 700; margin: 22px 0 10px; color: var(--text-secondary); }
-.section-heading .muted { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+.section-heading .muted { font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 13.5px; }
 .division-card-global { border-color: var(--brand-red); }
 .division-value-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .progress-cell { min-width: 100px; }
@@ -376,12 +386,12 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .mini-progress-fill.warn { background: var(--warning); }
 .mini-progress-fill.bad { background: var(--bad); }
 .mini-progress-fill.neutral { background: var(--text-muted); }
-.progress-pct { font-size: 11px; color: var(--text-secondary); }
+.progress-pct { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 
 .score-ring {
   width: 34px; height: 34px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 800;
+  font-size: 12px; font-weight: 800;
 }
 .score-ring-inner {
   width: 27px; height: 27px; border-radius: 50%; background: var(--bg-card);
@@ -394,7 +404,7 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 
 .side-col { display: flex; flex-direction: column; gap: 14px; }
 
-.live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+.live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
 .live-dot .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
 .live-dot.is-mock { color: var(--warning); font-weight: 700; }
 .live-dot.is-mock .dot { background: var(--warning); }
@@ -408,10 +418,10 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 }
 .activity-icon svg { width: 14px; height: 14px; }
 .activity-body { flex: 1; min-width: 0; }
-.activity-title { font-size: 13px; font-weight: 600; }
-.activity-sub { font-size: 11px; color: var(--text-muted); }
-.activity-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
-.activity-amount { font-size: 12px; font-weight: 700; color: var(--brand-red); white-space: nowrap; }
+.activity-title { font-size: 14px; font-weight: 600; }
+.activity-sub { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.activity-time { font-size: 12px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+.activity-amount { font-size: 13px; font-weight: 700; color: var(--brand-red); white-space: nowrap; }
 .activity-row-top { display: flex; justify-content: space-between; gap: 8px; }
 
 .alerts-placeholder { margin: 0; line-height: 1.5; }
@@ -445,32 +455,32 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .social-name { font-weight: 700; font-size: 14px; flex: 1; }
 
 .social-followers { font-size: 26px; font-weight: 800; }
-.social-followers-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-left: 6px; }
+.social-followers-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-left: 6px; }
 
 .social-metrics-row {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; gap: 10px;
+  font-size: 13px; font-weight: 500; color: var(--text-secondary); flex-wrap: wrap; gap: 10px;
   padding-top: 4px; border-top: 1px solid var(--border);
 }
 .social-metric { display: flex; flex-direction: column; gap: 2px; }
-.social-metric-value { font-weight: 700; color: var(--text-primary); font-size: 13px; }
+.social-metric-value { font-weight: 700; color: var(--text-primary); font-size: 14px; }
 
 /* ---------- Footer ---------- */
 
 .page-footer {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  font-size: 12px; color: var(--text-muted); margin-top: 4px;
+  font-size: 13px; font-weight: 500; color: var(--text-muted); margin-top: 4px;
 }
 .footer-sep { opacity: 0.5; }
 .link-btn {
-  background: none; border: none; color: var(--brand-red); font-weight: 700; font-size: 12px;
+  background: none; border: none; color: var(--brand-red); font-weight: 700; font-size: 13px;
   cursor: pointer; padding: 0;
 }
 .link-btn:disabled { opacity: 0.5; cursor: default; }
 .queued-notice { color: var(--warning); font-weight: 700; }
 
 .muted { color: var(--text-secondary); }
-.small { font-size: 12px; }
+.small { font-size: 13px; font-weight: 500; }
 
 /* ---------- Mobile (≤ 700px) ---------- */
 

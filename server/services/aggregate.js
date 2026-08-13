@@ -693,14 +693,16 @@ function getDivisionBreakdown(referenceDate = new Date()) {
 }
 
 // Comparaison Québec vs St-Bruno (carte "Québec vs St-Bruno" du dashboard):
-// $ Confirmé du mois en cours par succursale (branch, voir
-// excelStats.normalizeBranch), Shopify exclu (pas de succursale). 'Commun'
-// (ventes boutique/inventaire partagé, pas rattachées à une succursale) est
+// $ Confirmé par succursale (branch, voir excelStats.normalizeBranch) sur
+// la période demandée (`period`: 'month' = mois en cours, 'year' = année
+// financière en cours, même bornes que la carte "Année financière" - voir
+// getBounds), Shopify exclu (pas de succursale). 'Commun' (ventes
+// boutique/inventaire partagé, pas rattachées à une succursale) est
 // retourné a part et exclu de `total`/des pourcentages - comparer Québec vs
 // St-Bruno n'a de sens que sur ce qui leur est effectivement attribué.
-function getBranchComparison(referenceDate = new Date()) {
+function getBranchComparison(period = 'month', referenceDate = new Date()) {
   const sales = db.getAllSales();
-  const { start, end, label } = getBounds('month', 0, referenceDate);
+  const { start, end, label } = getBounds(period, 0, referenceDate);
 
   let quebec = 0;
   let stBruno = 0;

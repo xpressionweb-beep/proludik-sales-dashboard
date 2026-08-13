@@ -70,7 +70,8 @@ router.get('/divisions', (req, res) => {
 });
 
 router.get('/branch-comparison', (req, res) => {
-  res.json(aggregate.getBranchComparison());
+  const period = req.query.period === 'year' ? 'year' : 'month';
+  res.json(aggregate.getBranchComparison(period));
 });
 
 router.get('/monthly-sales-table', (req, res) => {

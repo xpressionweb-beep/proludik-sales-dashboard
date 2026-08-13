@@ -256,18 +256,18 @@ async function renderBigCards() {
 }
 
 // ---------- Comparaison Québec vs St-Bruno ----------
-// Carte "Québec vs St-Bruno" (mois en cours, dossiers Confirmés) - voir
-// aggregate.getBranchComparison. 'Commun' (ventes boutique/inventaire
-// partagé, pas rattachées à une succursale) est affiché à part, exclu de la
-// barre et des pourcentages (qui comparent seulement Québec vs St-Bruno).
-async function renderBranchComparison() {
-  const data = await fetchJson('/api/branch-comparison');
-
+// Deux cartes ("Mois en cours" et "Année financière", dossiers Confirmés) -
+// voir aggregate.getBranchComparison(period). 'Commun' (ventes boutique/
+// inventaire partagé, pas rattachées à une succursale) est affiché à part,
+// exclu de la barre et des pourcentages (qui comparent seulement Québec vs
+// St-Bruno).
+function branchCardHtml(title, data) {
   const quebecPct = data.quebecPct !== null ? data.quebecPct : 0;
   const stBrunoPct = data.stBrunoPct !== null ? data.stBrunoPct : 0;
 
-  document.getElementById('branchComparison').innerHTML = `
+  return `
     <div class="branch-card">
+      <div class="branch-card-title">${title}</div>
       <div class="branch-blocks">
         <div class="branch-block">
           <div class="branch-block-label"><span class="branch-block-dot quebec"></span>Québec</div>
@@ -286,6 +286,16 @@ async function renderBranchComparison() {
       </div>
       <div class="branch-commun">Commun (boutique/inventaire partagé) : <strong>${money.format(data.commun)}</strong> — non inclus dans la comparaison ci-dessus</div>
     </div>`;
+}
+
+async function renderBranchComparison() {
+  const [month, year] = await Promise.all([
+    fetchJson('/api/branch-comparison?period=month'),
+    fetchJson('/api/branch-comparison?period=year'),
+  ]);
+
+  document.getElementById('branchComparison').innerHTML =
+    branchCardHtml('Mois en cours', month) + branchCardHtml('Année financière', year);
 }
 
 // ---------- Compteurs de statut ----------
