@@ -392,24 +392,43 @@ function parseUploadedWorkbook(buf) {
 }
 
 // Diagnostic (voir GET /api/diagnostics/excel-headers dans routes/api.js):
-// expose les en-têtes réelles du fichier synchronisé et un échantillon de
-// valeurs brutes de "Date création", sans devoir naviguer le fichier Excel
-// à l'oeil. Sert à confirmer/infirmer que le nom de colonne attendu par le
-// code (`row['Date création']`) correspond bien à celui du fichier source -
-// si la clé n'existe pas telle quelle (accent/espace/casse différents), la
-// valeur est toujours `undefined`, `toIso()` retourne `null`, et
-// `createdDate` retombe silencieusement sur `orderDate` (date d'événement)
-// pour CHAQUE ligne - ce qui expliquerait "Nouveaux dossiers"/"Semaine
-// dernière" bloqués à 0 même avec l'historique complet du fichier chargé.
-async function debugExcelHeaders() {
-  const rows = await loadRows();
+// expose les en-têtes réelles du fichier synchronisé, un échantillon de
+// valeurs brutes de "Date création", la distribution des valeurs brutes de
+// "Statut simplifié" (pour reperer un statut non reconnu par mapIoStatus,
+// qui ferait disparaitre silencieusement la ligne de tout le systeme -
+// meme "Nouveaux dossiers", qui pourtant ne filtre pas par statut), et le
+// detail des lignes dont "Date création" tombe dans les 14 derniers jours
+// (fenetre couverte par les cartes "Nouveaux dossiers"/"Semaine derniere").
+function analyzeRowsForDebug(rows) {
   const headers = rows.length ? Object.keys(rows[0]) : [];
 
   let validDateCreation = 0;
   let invalidOrMissingDateCreation = 0;
+  const statutCounts = {};
+  const recentCutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  const recentRows = [];
+
   for (const row of rows) {
     if (toIso(row['Date création'])) validDateCreation += 1;
     else invalidOrMissingDateCreation += 1;
+
+    const statutRaw = row['Statut simplifié'];
+    const key = statutRaw === null || statutRaw === undefined || statutRaw === '' ? '(vide)' : String(statutRaw);
+    statutCounts[key] = (statutCounts[key] || 0) + 1;
+
+    const createdIso = toIso(row['Date création']);
+    if (createdIso && new Date(createdIso).getTime() >= recentCutoff) {
+      recentRows.push({
+        'No Contrat': row['No Contrat'],
+        'Date création': createdIso,
+        Date: toIso(row['Date']),
+        'Statut simplifié': row['Statut simplifié'],
+        'Statut mappé': mapIoStatus(row['Statut simplifié']),
+        Type: row['Type'],
+        Classe: row['Classe'],
+        Représentant: row['Représentant'],
+      });
+    }
   }
 
   const sample = rows.slice(0, 5).map((row) => ({
@@ -426,8 +445,15 @@ async function debugExcelHeaders() {
     headers,
     dateCreationColumnFound: headers.includes('Date création'),
     dateCreation: { valid: validDateCreation, invalidOrMissing: invalidOrMissingDateCreation },
+    statutSimplifieCounts: statutCounts,
+    recentRows14d: { cutoff: new Date(recentCutoff).toISOString(), count: recentRows.length, rows: recentRows.slice(0, 30) },
     sample,
   };
+}
+
+async function debugExcelHeaders() {
+  const rows = await loadRows();
+  return analyzeRowsForDebug(rows);
 }
 
 module.exports = {
