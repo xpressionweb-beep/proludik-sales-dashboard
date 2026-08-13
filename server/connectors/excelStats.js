@@ -287,15 +287,30 @@ function toIso(date) {
   return date instanceof Date && !Number.isNaN(date.getTime()) ? date.toISOString() : null;
 }
 
-function buildRecords(rows, { sinceIso } = {}) {
-  const since = sinceIso ? new Date(sinceIso) : null;
+// BUG CORRIGÉ (13 août 2026): buildRecords() acceptait un `sinceIso` et
+// excluait toute ligne dont "Date" (evenement) etait anterieure a ce
+// curseur - mais loadRows() retelecharge et re-parse le fichier EN ENTIER
+// a chaque sync (pas d'appel incremental a la source), donc ce filtre ne
+// faisait qu'exclure des lignes valides sans jamais economiser de bande
+// passante. Pire: les dates Excel sont stockees a minuit, donc un dossier
+// tout juste cree aujourd'hui avec un evenement aujourd'hui (ex: vente/
+// reparation livree le jour meme) a un orderDate = minuit, systematique-
+// ment anterieur au curseur `since` (l'heure du dernier sync, plus tard le
+// meme jour) - la ligne etait donc silencieusement ecartee et n'entrait
+// JAMAIS dans data/sales.json, meme si "Date création" (colonne distincte,
+// voir plus bas) etait bien recente. Symptome observe: "Nouveaux dossiers"
+// et "Ventes confirmées (semaine dernière)" bloqués à 0 alors que le
+// fichier de référence de la collègue montrait des dizaines de nouveaux
+// contrats/semaine. Plus de filtre `since` ici: le fichier étant toujours
+// lu en entier, on retourne systématiquement tout l'historique, comme le
+// fait déjà parseUploadedWorkbook() pour l'upload manuel.
+function buildRecords(rows) {
   const io = [];
   const shopify = [];
 
   for (const row of rows) {
     const orderDate = toIso(row['Date']);
     if (!orderDate) continue; // ligne sans date exploitable -> ignorée
-    if (since && new Date(orderDate) < since) continue;
 
     const repRaw = (row['Représentant'] || '').toString().trim();
     const amount = Number(row['$ avec trsp']) || 0;
@@ -350,24 +365,30 @@ function buildRecords(rows, { sinceIso } = {}) {
   return { io, shopify };
 }
 
-async function fetchIoSales({ sinceIso } = {}) {
+// sinceIso accepté mais ignoré: services/sync.js calcule et passe ce
+// curseur pour tous les connecteurs (design pensé pour les API Shopify/IO
+// d'origine, ou un fetch incremental economise du trafic), mais
+// loadRows() ci-dessus retourne toujours l'integralite du fichier - voir
+// le commentaire sur buildRecords() pour le bug que ce filtre causait.
+async function fetchIoSales() {
   const rows = await loadRows();
-  return buildRecords(rows, { sinceIso }).io;
+  return buildRecords(rows).io;
 }
 
-async function fetchShopifySales({ sinceIso } = {}) {
+async function fetchShopifySales() {
   const rows = await loadRows();
-  return buildRecords(rows, { sinceIso }).shopify;
+  return buildRecords(rows).shopify;
 }
 
 // Utilisé par la route d'upload manuel (server/routes/api.js): parse un
 // buffer .xlsx reçu directement (pas de téléchargement OneDrive), et
-// retourne TOUT l'historique du fichier (pas de filtre sinceIso) - un
-// upload manuel remplace entièrement les données existantes (voir
-// db.replaceSourceSales), donc on veut la totalité du fichier à chaque fois.
+// retourne TOUT l'historique du fichier - un upload manuel remplace
+// entièrement les données existantes (voir db.replaceSourceSales), donc on
+// veut la totalité du fichier à chaque fois (buildRecords() ne filtre plus
+// jamais par date, voir plus haut).
 function parseUploadedWorkbook(buf) {
   const rows = parseRowsFromBuffer(buf);
-  return buildRecords(rows, {});
+  return buildRecords(rows);
 }
 
 module.exports = {
