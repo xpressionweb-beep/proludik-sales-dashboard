@@ -363,13 +363,27 @@ function getGlobalObjective(referenceDate = new Date()) {
   return { fiscalYear: fyLabel, amount, target, pct };
 }
 
-// Numero de semaine ISO 8601 (1-53) de la semaine calendaire contenant `date`.
-function isoWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7; // dimanche (0) -> 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+// Lundi de la semaine (lundi-dimanche) contenant `date`.
+function mondayOf(date) {
+  const day = date.getDay(); // 0=dim..6=sam
+  const diffToMonday = (day + 6) % 7;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() - diffToMonday);
+}
+
+// Numero de semaine "fiscale" de `date`: semaine 1 = la semaine (lundi-
+// dimanche) contenant le 1er jour de l'annee financiere (1er octobre, voir
+// config.fiscalYearStartMonth) - PAS la semaine calendaire ISO 8601
+// (remise a zero le 1er janvier). Matche la numerotation utilisee dans le
+// fichier de reference de la collegue (ex: mi-aout tombe autour de la
+// semaine fiscale 45-46, pas "S33" qui serait le numero ISO standard -
+// source de confusion pour l'equipe, qui raisonne toujours en annee
+// fiscale sur ce dashboard).
+function fiscalWeekNumber(date) {
+  const monday = mondayOf(date);
+  const fyStartYear = date.getMonth() >= config.fiscalYearStartMonth ? date.getFullYear() : date.getFullYear() - 1;
+  const fyStartMonday = mondayOf(new Date(fyStartYear, config.fiscalYearStartMonth, 1));
+  const diffDays = Math.round((monday - fyStartMonday) / (24 * 60 * 60 * 1000));
+  return Math.floor(diffDays / 7) + 1;
 }
 
 // Serie de points reels pour la mini-sparkline de chaque grande carte:
@@ -401,7 +415,7 @@ function getTrend(cardType, referenceDate = new Date()) {
     for (let offset = -2; offset <= 2; offset += 1) {
       const { start, end } = getBounds('week', offset, referenceDate);
       points.push({
-        label: `S${isoWeekNumber(start)}`,
+        label: `S${fiscalWeekNumber(start)}`,
         amount: computeTotals(sales, start, end).grandTotal,
         current: offset === 0,
       });
