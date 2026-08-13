@@ -288,7 +288,11 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 .branch-bar-quebec { background: var(--brand-navy); }
 .branch-bar-st-bruno { background: var(--brand-red); }
 
-.branch-commun { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.branch-other-rows { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.branch-other-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.branch-other-row strong { font-weight: 700; color: var(--text-secondary); }
+.branch-other-total { margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--border); color: var(--text-secondary); font-weight: 600; }
+.branch-other-total strong { color: var(--brand-red); font-size: 14px; }
 
 /* ---------- Status counters ---------- */
 

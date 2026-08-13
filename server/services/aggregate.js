@@ -696,10 +696,14 @@ function getDivisionBreakdown(referenceDate = new Date()) {
 // $ Confirmé par succursale (branch, voir excelStats.normalizeBranch) sur
 // la période demandée (`period`: 'month' = mois en cours, 'year' = année
 // financière en cours, même bornes que la carte "Année financière" - voir
-// getBounds), Shopify exclu (pas de succursale). 'Commun' (ventes
-// boutique/inventaire partagé, pas rattachées à une succursale) est
-// retourné a part et exclu de `total`/des pourcentages - comparer Québec vs
-// St-Bruno n'a de sens que sur ce qui leur est effectivement attribué.
+// getBounds). 'Commun' (dossiers IO Confirmé sans succursale précisée dans
+// la colonne "Classe") et 'shopify' (boutique en ligne, jamais rattachée à
+// une succursale - voir excelStats.SHOPIFY_REPS) sont retournés à part et
+// exclus de `total`/des pourcentages: comparer Québec vs St-Bruno n'a de
+// sens que sur ce qui leur est effectivement attribué. `grandTotal` (=
+// quebec + stBruno + commun + shopify) correspond exactement au $ Conclu de
+// la même période affiché sur la grande carte ("Mois en cours"/"Année
+// financière") - sert à réconcilier visuellement les deux cartes.
 function getBranchComparison(period = 'month', referenceDate = new Date()) {
   const sales = db.getAllSales();
   const { start, end, label } = getBounds(period, 0, referenceDate);
@@ -707,10 +711,15 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
   let quebec = 0;
   let stBruno = 0;
   let commun = 0;
+  let shopify = 0;
 
   for (const sale of sales) {
-    if (sale.source !== 'io' || sale.status !== 'Confirmé') continue;
     if (!inRange(sale.orderDate, start, end)) continue;
+    if (sale.source === 'shopify') {
+      shopify += sale.amount;
+      continue;
+    }
+    if (sale.source !== 'io' || sale.status !== 'Confirmé') continue;
     if (sale.branch === 'Québec') quebec += sale.amount;
     else if (sale.branch === 'St-Bruno') stBruno += sale.amount;
     else commun += sale.amount;
@@ -719,8 +728,9 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
   const total = quebec + stBruno;
   const quebecPct = total > 0 ? (quebec / total) * 100 : null;
   const stBrunoPct = total > 0 ? (stBruno / total) * 100 : null;
+  const grandTotal = quebec + stBruno + commun + shopify;
 
-  return { label, quebec, stBruno, commun, total, quebecPct, stBrunoPct };
+  return { label, quebec, stBruno, commun, shopify, total, quebecPct, stBrunoPct, grandTotal };
 }
 
 module.exports = {
