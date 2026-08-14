@@ -63,55 +63,8 @@ body {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: 220px 1fr;
   min-height: 100vh;
 }
-
-/* ---------- Sidebar ---------- */
-
-/* La colonne de gauche reste toujours en bleu Proludik (--brand-navy),
-   peu importe le thème clair/sombre choisi pour le reste du dashboard -
-   couleurs codées en dur ici plutôt que via les variables --bg-sidebar /
-   --text-* qui, elles, changent avec le thème. Le logo (blanc/rouge,
-   pensé pour un fond foncé) reste donc lui aussi fixe - voir
-   initBrandLogo() dans dashboard.js. */
-.sidebar {
-  background: var(--brand-navy);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 20px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.sidebar-logo { display: flex; align-items: center; min-height: 36px; }
-.brand-mark { max-width: 100%; height: 32px; object-fit: contain; }
-.brand-fallback { display: none; align-items: center; gap: 8px; }
-.brand-fallback-mark {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: var(--brand-red); color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 16px;
-}
-.brand-fallback-text { font-weight: 800; letter-spacing: 0.5px; font-size: 16px; color: #fff; }
-
-.nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
-.nav-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 8px;
-  font-weight: 600; font-size: 13px; letter-spacing: 0.3px;
-  color: rgba(255, 255, 255, 0.68);
-}
-.nav-item.is-active { background: var(--brand-red); color: #fff; }
-.nav-item.is-disabled { color: rgba(255, 255, 255, 0.32); cursor: default; }
-.nav-icon { width: 18px; height: 18px; flex: none; display: flex; }
-.nav-icon svg { width: 100%; height: 100%; }
-
-.sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.14); padding-top: 14px; }
-.sidebar-tagline { margin: 0; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; color: #fff; }
-.sidebar-tagline .accent { color: var(--brand-red); }
-.sidebar-subtagline { margin: 6px 0 0; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.55); line-height: 1.5; letter-spacing: 0.3px; }
 
 /* ---------- Header ---------- */
 
@@ -126,6 +79,32 @@ body {
   align-items: center;
   gap: 16px;
 }
+
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+
+/* Le badge du logo reste toujours en bleu Proludik (--brand-navy), peu
+   importe le thème clair/sombre choisi pour le reste du dashboard -
+   couleurs codées en dur ici plutôt que via les variables --bg-header /
+   --text-* qui, elles, changent avec le thème. Le logo (blanc/rouge,
+   pensé pour un fond foncé) reste donc lui aussi fixe - voir
+   initBrandLogo() dans dashboard.js. */
+.topbar-brand {
+  display: flex; align-items: center; min-height: 32px;
+  background: var(--brand-navy); border-radius: 8px; padding: 6px 12px;
+  flex: none;
+}
+.brand-mark { max-width: 100%; height: 24px; object-fit: contain; }
+.brand-fallback { display: none; align-items: center; gap: 8px; }
+.brand-fallback-mark {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--brand-red); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px;
+}
+.brand-fallback-text { font-weight: 800; letter-spacing: 0.5px; font-size: 14px; color: #fff; }
+
+.nav-icon { width: 18px; height: 18px; flex: none; display: flex; }
+.nav-icon svg { width: 100%; height: 100%; }
 
 .topbar-datetime { display: flex; flex-direction: column; font-size: 13px; color: var(--text-secondary); }
 .topbar-date { font-weight: 700; letter-spacing: 0.5px; }
@@ -512,31 +491,10 @@ main { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px
 @media (max-width: 700px) {
   body { font-size: 13px; }
 
-  /* La sidebar 220px fixe est ce qui écrase le contenu sur téléphone :
-     on passe le layout en une seule colonne et la sidebar devient un
-     bandeau horizontal compact en haut plutôt qu'une colonne latérale. */
-  .app-shell { grid-template-columns: 1fr; }
-
-  .sidebar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    gap: 10px;
-    overflow-x: auto;
-  }
-  .sidebar-logo { flex: none; }
-  .brand-mark { height: 24px; }
-
-  /* Les items de nav sont presque tous "bientôt disponible" - inutile de
-     leur donner toute une colonne sur un petit écran, on les cache et on
-     garde juste le logo + la tagline dans le bandeau. */
-  .nav-list { display: none; }
-  .sidebar-footer { border-top: none; padding-top: 0; text-align: right; }
-  .sidebar-tagline { font-size: 11px; }
-  .sidebar-subtagline { display: none; }
-
   .topbar { padding: 12px 14px; gap: 8px; }
+  .topbar-left { justify-content: center; flex-wrap: wrap; }
+  .topbar-brand { padding: 4px 10px; }
+  .brand-mark { height: 20px; }
   .topbar-title { font-size: 14px; white-space: normal; }
   .topbar-fiscal { gap: 8px; flex-wrap: wrap; justify-content: center; }
   .fiscal-label { display: none; }
