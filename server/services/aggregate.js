@@ -711,13 +711,19 @@ function getDivisionBreakdown(referenceDate = new Date()) {
 // la période demandée (`period`: 'month' = mois en cours, 'year' = année
 // financière en cours, même bornes que la carte "Année financière" - voir
 // getBounds). 'Commun' (dossiers IO Confirmé sans succursale précisée dans
-// la colonne "Classe") et 'shopify' (boutique en ligne, jamais rattachée à
-// une succursale - voir excelStats.SHOPIFY_REPS) sont retournés à part et
-// exclus de `total`/des pourcentages: comparer Québec vs St-Bruno n'a de
-// sens que sur ce qui leur est effectivement attribué. `grandTotal` (=
-// quebec + stBruno + commun + shopify) correspond exactement au $ Conclu de
-// la même période affiché sur la grande carte ("Mois en cours"/"Année
-// financière") - sert à réconcilier visuellement les deux cartes.
+// la colonne "Classe"), 'fabrication' (dossiers IO Confirmé de type
+// Fabrication - voir excelStats.normalizeIoType - peu importe leur
+// succursale assignée: la fabrication est une activité centrale, pas
+// rattachée à une succursale de vente/location, donc on l'exclut du split
+// Québec/St-Bruno même si "Classe" pointe vers l'une des deux) et
+// 'shopify' (boutique en ligne, jamais rattachée à une succursale - voir
+// excelStats.SHOPIFY_REPS) sont retournés à part et exclus de
+// `total`/des pourcentages: comparer Québec vs St-Bruno n'a de sens que
+// sur ce qui leur est effectivement attribué. `grandTotal` (= quebec +
+// stBruno + commun + fabrication + shopify) correspond exactement au $
+// Conclu de la même période affiché sur la grande carte ("Mois en
+// cours"/"Année financière") - sert à réconcilier visuellement les deux
+// cartes.
 function getBranchComparison(period = 'month', referenceDate = new Date()) {
   const sales = db.getAllSales();
   const { start, end, label } = getBounds(period, 0, referenceDate);
@@ -725,6 +731,7 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
   let quebec = 0;
   let stBruno = 0;
   let commun = 0;
+  let fabrication = 0;
   let shopify = 0;
 
   for (const sale of sales) {
@@ -734,7 +741,8 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
       continue;
     }
     if (sale.source !== 'io' || sale.status !== 'Confirmé') continue;
-    if (sale.branch === 'Québec') quebec += sale.amount;
+    if (sale.type === 'Fabrication') fabrication += sale.amount;
+    else if (sale.branch === 'Québec') quebec += sale.amount;
     else if (sale.branch === 'St-Bruno') stBruno += sale.amount;
     else commun += sale.amount;
   }
@@ -742,9 +750,9 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
   const total = quebec + stBruno;
   const quebecPct = total > 0 ? (quebec / total) * 100 : null;
   const stBrunoPct = total > 0 ? (stBruno / total) * 100 : null;
-  const grandTotal = quebec + stBruno + commun + shopify;
+  const grandTotal = quebec + stBruno + commun + fabrication + shopify;
 
-  return { label, quebec, stBruno, commun, shopify, total, quebecPct, stBrunoPct, grandTotal };
+  return { label, quebec, stBruno, commun, fabrication, shopify, total, quebecPct, stBrunoPct, grandTotal };
 }
 
 module.exports = {
