@@ -258,19 +258,21 @@ async function renderBigCards() {
 // ---------- Comparaison Québec vs St-Bruno ----------
 // Deux cartes ("Mois en cours" et "Année financière", dossiers Confirmés) -
 // voir aggregate.getBranchComparison(period). 'Commun' (dossiers IO sans
-// succursale précisée), 'Fabrication' (dossiers IO de type Fabrication,
-// peu importe leur succursale assignée - la fabrication n'est pas une
-// activité de succursale) et Shopify (boutique en ligne) n'ont pas de
-// succursale assignée pertinente - regroupés en une seule ligne "Hors
-// succursale", exclue de la barre et des pourcentages (qui comparent
-// seulement Québec vs St-Bruno) - mais incluse dans la ligne "Total", qui
+// succursale précisée) et Shopify (boutique en ligne) n'ont pas de
+// succursale assignée pertinente - regroupés dans une ligne "Hors
+// succursale". 'Fabrication' (dossiers IO de type Fabrication, peu importe
+// leur succursale assignée - la fabrication n'est pas une activité de
+// succursale) est affichée sur sa propre ligne distincte, pour qu'on
+// puisse voir ce poids-là séparément du reste du "hors succursale". Les
+// deux lignes sont exclues de la barre et des pourcentages (qui comparent
+// seulement Québec vs St-Bruno) - mais incluses dans la ligne "Total", qui
 // correspond exactement au $ Conclu de la grande carte du haut pour la
 // même période (permet de vérifier que rien ne "manque" entre les deux
 // cartes).
 function branchCardHtml(title, data) {
   const quebecPct = data.quebecPct !== null ? data.quebecPct : 0;
   const stBrunoPct = data.stBrunoPct !== null ? data.stBrunoPct : 0;
-  const horsSuccursale = data.commun + data.fabrication + data.shopify;
+  const horsSuccursale = data.commun + data.shopify;
 
   return `
     <div class="branch-card">
@@ -292,7 +294,8 @@ function branchCardHtml(title, data) {
         <div class="branch-bar-st-bruno" style="width:${stBrunoPct}%"></div>
       </div>
       <div class="branch-other-rows">
-        <div class="branch-other-row"><span>Hors succursale (Commun + Fabrication + Boutique Shopify)</span><strong>${money.format(horsSuccursale)}</strong></div>
+        <div class="branch-other-row"><span>Hors succursale (Commun + Boutique Shopify)</span><strong>${money.format(horsSuccursale)}</strong></div>
+        <div class="branch-other-row"><span>Fabrication</span><strong>${money.format(data.fabrication)}</strong></div>
         <div class="branch-other-row branch-other-total"><span>Total (= $ Conclu de la période)</span><strong>${money.format(data.grandTotal)}</strong></div>
       </div>
     </div>`;
