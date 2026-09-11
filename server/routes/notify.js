@@ -10,7 +10,7 @@ const PUSHOVER_USER_KEY = process.env.PUSHOVER_USER_KEY;   // uvhjffnfwk2dm3d1c5
 // le nom affiché sur pushover.net → "Your Devices"
 const RECIPIENTS = {
   jerome: { label: "Jérôme", device: "iphone-je" },
-  // dan: { label: "Dan (Entrepôt)", device: "NOM_A_CONFIRMER" },
+  dan: { label: "Dan (Entrepôt)", device: "Dan-Entrepot" },
 };
 
 // GET /api/notify/recipients
