@@ -34,11 +34,19 @@
     width: 100%;
     max-width: 480px;
   }
+  .logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--blue);
+    padding: 10px;
+    border-radius: 12px;
+    margin: 0 0 10px 2px;
+  }
   .logo {
     display: block;
     width: 64px;
     height: 64px;
-    margin: 0 0 10px 2px;
   }
   .kicker {
     font-family: 'Barlow Condensed', sans-serif;
@@ -195,7 +203,7 @@
 <body>
 
 <div class="sheet">
-  <img class="logo" src="/logo.png" alt="Proludik">
+  <div class="logo-wrap"><img class="logo" src="/logo.png" alt="Proludik"></div>
   <p class="kicker">PROLUDIK</p>
   <h1>Envoyer une notification</h1>
 
