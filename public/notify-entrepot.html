@@ -3,214 +3,430 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Proludik - Aviser l'entrepôt</title>
+<title>Envoyer une notification — Proludik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --navy: #1a2744;
-    --red: #c8102e;
-    --bg: #f4f5f7;
+    --ink: #1c1e22;
+    --paper: #f7f5f1;
+    --card: #ffffff;
+    --line: #e3ded4;
+    --orange: #c8102e;
+    --orange-dark: #a30d26;
+    --blue: #1a2744;
+    --ok: #1f8a4c;
+    --muted: #6b6f76;
   }
   * { box-sizing: border-box; }
   body {
-    font-family: 'Barlow', Arial, sans-serif;
-    background: var(--bg);
     margin: 0;
-    padding: 24px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
     display: flex;
+    align-items: center;
     justify-content: center;
+    padding: 24px;
+  }
+  .sheet {
+    width: 100%;
+    max-width: 480px;
+  }
+  .logo {
+    display: block;
+    width: 64px;
+    height: 64px;
+    margin: 0 0 10px 2px;
+  }
+  .kicker {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--blue);
+    margin: 0 0 4px 2px;
+  }
+  h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 34px;
+    line-height: 1.05;
+    margin: 0 0 22px 2px;
+    color: var(--ink);
   }
   .card {
-    background: white;
-    max-width: 480px;
-    width: 100%;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
   }
-  .header {
-    background: var(--navy);
-    color: white;
-    padding: 20px 24px;
-  }
-  .header h1 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-  }
-  .header p {
-    margin: 4px 0 0;
-    font-size: 13px;
-    opacity: 0.8;
-  }
-  .body {
-    padding: 24px;
-  }
-  label {
-    display: block;
+  .section-label {
     font-size: 13px;
     font-weight: 600;
-    color: var(--navy);
-    margin-bottom: 6px;
-    margin-top: 16px;
+    color: var(--muted);
+    margin: 0 0 10px 0;
   }
-  label:first-child { margin-top: 0; }
-  select, textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 15px;
-    font-family: inherit;
+  .recipients {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
   }
-  textarea {
-    resize: vertical;
-    min-height: 70px;
+  .recip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    user-select: none;
   }
-  .quick-buttons {
+  .recip:active { transform: scale(0.99); }
+  .recip.checked {
+    border-color: var(--orange);
+    background: #fff4ec;
+  }
+  .recip input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--orange);
+    flex-shrink: 0;
+  }
+  .recip span { font-size: 16px; font-weight: 500; }
+  .recip.all {
+    border-style: dashed;
+    border-color: var(--blue);
+  }
+  .recip.all.checked {
+    background: #eaf1fa;
+    border-style: solid;
+  }
+  .divider {
+    height: 1px;
+    background: var(--line);
+    margin: 4px 0 16px 0;
+  }
+  .presets {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 8px;
+    margin-bottom: 20px;
   }
-  .quick-btn {
-    background: #eef0f4;
-    border: 1px solid #ddd;
-    border-radius: 20px;
+  .preset-btn {
+    border: 1.5px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 999px;
     padding: 8px 14px;
-    font-size: 13px;
     cursor: pointer;
-    color: var(--navy);
+    transition: border-color 0.15s ease, background 0.15s ease;
   }
-  .quick-btn:hover { background: #e2e5ec; }
-  .send-btn {
+  .preset-btn:hover {
+    border-color: var(--orange);
+  }
+  .preset-btn.active {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: white;
+  }
+  textarea {
     width: 100%;
-    background: var(--red);
+    min-height: 96px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 16px;
+    resize: vertical;
+    color: var(--ink);
+    margin-bottom: 18px;
+  }
+  textarea:focus, .recip input:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 1px;
+  }
+  button.send {
+    width: 100%;
+    background: var(--orange);
     color: white;
     border: none;
-    border-radius: 8px;
-    padding: 14px;
-    font-size: 16px;
+    border-radius: 10px;
+    padding: 15px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 17px;
     font-weight: 700;
     cursor: pointer;
-    margin-top: 20px;
+    transition: background 0.15s ease;
   }
-  .send-btn:hover { opacity: 0.9; }
-  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .status {
+  button.send:hover { background: var(--orange-dark); }
+  button.send:disabled {
+    background: #d8d2c6;
+    cursor: not-allowed;
+  }
+  .statuses {
     margin-top: 14px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    text-align: center;
-    display: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-  .status.success { background: #e6f7ec; color: #1a7a3d; display: block; }
-  .status.error { background: #fdeaea; color: var(--red); display: block; }
+  .status-line {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+  }
+  .status-line.ok { color: var(--ok); }
+  .status-line.err { color: #c23b22; }
+  .status-line.pending { color: var(--muted); }
+  .footnote {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 16px;
+  }
 </style>
 </head>
 <body>
 
-<div class="card">
-  <div class="header">
-    <img src="/logo.png" alt="Proludik" style="height: 40px; margin-bottom: 8px;">
-    <h1>Aviser l'entrepôt</h1>
-    <p>Envoie une notif instantanée sur le iPhone</p>
+<div class="sheet">
+  <img class="logo" src="/logo.png" alt="Proludik">
+  <p class="kicker">PROLUDIK</p>
+  <h1>Envoyer une notification</h1>
+
+  <div class="card">
+    <p class="section-label">À qui ?</p>
+    <div class="recipients" id="recipients">
+      <p class="section-label" id="recipientsLoading">Chargement…</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <p class="section-label">Phrases rapides</p>
+    <div class="presets" id="presets"></div>
+
+    <p class="section-label">Message</p>
+    <textarea id="message" placeholder="Ex: Client sur place pour ramassage commande #4521"></textarea>
+
+    <button class="send" id="sendBtn">Envoyer</button>
+    <div class="statuses" id="statuses"></div>
   </div>
-  <div class="body">
 
-    <label for="recipient">Destinataire</label>
-    <select id="recipient"></select>
-
-    <label for="message">Message</label>
-    <textarea id="message" placeholder="Ex: Client pour dossier #1234 est arrivé"></textarea>
-
-    <div class="quick-buttons" id="quickButtons"></div>
-
-    <button class="send-btn" id="sendBtn" onclick="sendNotif()">Envoyer</button>
-
-    <div class="status" id="status"></div>
-  </div>
+  <p class="footnote">Réception Proludik — notifications Pushover</p>
 </div>
 
 <script>
+  // Le token Pushover et la user key restent côté serveur (server/routes/notify.js,
+  // variables d'environnement) — cette page ne fait qu'appeler l'API de l'app,
+  // elle ne parle jamais directement à l'API Pushover.
   const API_BASE = window.location.origin;
-  const PENDING_KEY = 'proludik_pending_notif';
+  const PENDING_KEY = 'proludik_pending_notifs';
+  const ALL_ID = '__all__';
 
-  const quickMessages = [
-    "Client pour ramassage de jeux",
-    "Client pour ramassage Boutique",
-    "Livreur à l'arrière"
-];
+  // Ajoute/enlève/modifie tes phrases préfaites ici.
+  const PRESET_MESSAGES = [
+    "Client pour ramassage",
+    "Livreur à l'arrière",
+    "Appel en attente",
+  ];
+
+  const recipientsEl = document.getElementById('recipients');
+  const statusesEl = document.getElementById('statuses');
+  const sendBtn = document.getElementById('sendBtn');
+  const messageEl = document.getElementById('message');
+  const presetsEl = document.getElementById('presets');
+
+  let RECIPIENTS = []; // [{ id, label }]
+  let checkboxes = [];
+
+  function buildRecipientRow(id, label, isAll) {
+    const row = document.createElement('label');
+    row.className = 'recip' + (isAll ? ' all' : '');
+    row.dataset.id = id;
+    row.innerHTML = `<input type="checkbox" data-id="${id}"><span>${label}</span>`;
+    return row;
+  }
 
   async function loadRecipients() {
-    const select = document.getElementById('recipient');
     try {
       const res = await fetch(`${API_BASE}/api/notify/recipients`);
-      const list = await res.json();
-      select.innerHTML = list.map(r => `<option value="${r.id}">${r.label}</option>`).join('');
+      RECIPIENTS = await res.json();
     } catch (e) {
-      select.innerHTML = `<option value="">Erreur de chargement</option>`;
+      RECIPIENTS = [];
     }
-  }
 
-  function renderQuickButtons() {
-    const container = document.getElementById('quickButtons');
-    container.innerHTML = quickMessages.map(msg =>
-      `<button type="button" class="quick-btn" onclick="setMessage('${msg.replace(/'/g, "\\'")}')">${msg}</button>`
-    ).join('');
-  }
+    recipientsEl.innerHTML = '';
 
-  function setMessage(text) {
-    document.getElementById('message').value = text;
-  }
-
-  async function sendNotif() {
-    const recipient = document.getElementById('recipient').value;
-    const message = document.getElementById('message').value.trim();
-    const btn = document.getElementById('sendBtn');
-    const statusEl = document.getElementById('status');
-
-    if (!message) {
-      statusEl.className = 'status error';
-      statusEl.textContent = 'Écris un message avant d\'envoyer.';
+    if (!RECIPIENTS.length) {
+      recipientsEl.innerHTML = '<p class="section-label">Erreur de chargement des destinataires.</p>';
       return;
     }
 
-    btn.disabled = true;
-    btn.textContent = 'Envoi...';
-    statusEl.className = 'status';
+    // "Tous" en premier, puis chaque personne
+    recipientsEl.appendChild(buildRecipientRow(ALL_ID, "Tous", true));
+    RECIPIENTS.forEach(r => {
+      recipientsEl.appendChild(buildRecipientRow(r.id, r.label, false));
+    });
 
-    try {
-      const res = await fetch(`${API_BASE}/api/notify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipient, message })
-      });
-      const data = await res.json();
+    checkboxes = Array.from(recipientsEl.querySelectorAll('input[type="checkbox"]'));
+    resumePendingWatch();
+  }
 
-      if (data.success) {
-        statusEl.className = 'status success';
-        statusEl.textContent = '✅ Message envoyé! En attente de confirmation...';
-        document.getElementById('message').value = '';
-        if (data.id) {
-          localStorage.setItem(PENDING_KEY, data.id);
-          watchAck(data.id);
-        }
+  recipientsEl.addEventListener('change', (e) => {
+    const target = e.target;
+    if (!target.matches('input[type="checkbox"]')) return;
+
+    const allCb = checkboxes.find(cb => cb.dataset.id === ALL_ID);
+
+    if (target.dataset.id === ALL_ID && target.checked) {
+      // Cocher "Tous" décoche les individuels
+      checkboxes.forEach(cb => { if (cb !== allCb) cb.checked = false; });
+    } else if (target.dataset.id !== ALL_ID && target.checked) {
+      // Cocher un individuel décoche "Tous"
+      allCb.checked = false;
+    }
+    refreshRowStyles();
+  });
+
+  function refreshRowStyles() {
+    checkboxes.forEach(cb => {
+      cb.closest('.recip').classList.toggle('checked', cb.checked);
+    });
+  }
+
+  function getSelectedRecipientIds() {
+    const allChecked = checkboxes.find(cb => cb.dataset.id === ALL_ID)?.checked;
+    if (allChecked) return RECIPIENTS.map(r => r.id);
+    return checkboxes
+      .filter(cb => cb.dataset.id !== ALL_ID && cb.checked)
+      .map(cb => cb.dataset.id);
+  }
+
+  // Phrases rapides
+  PRESET_MESSAGES.forEach(phrase => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preset-btn';
+    btn.textContent = phrase;
+    btn.addEventListener('click', () => {
+      const isActive = btn.classList.contains('active');
+      presetsEl.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      if (isActive) {
+        messageEl.value = "";
       } else {
-        statusEl.className = 'status error';
-        statusEl.textContent = '❌ ' + (data.error || 'Erreur inconnue');
+        btn.classList.add('active');
+        messageEl.value = phrase;
       }
-    } catch (e) {
-      statusEl.className = 'status error';
-      statusEl.textContent = '❌ Impossible de contacter le serveur';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Envoyer';
+      messageEl.focus();
+    });
+    presetsEl.appendChild(btn);
+  });
+
+  messageEl.addEventListener('input', () => {
+    const activeBtn = presetsEl.querySelector('.preset-btn.active');
+    if (activeBtn && messageEl.value !== activeBtn.textContent) {
+      activeBtn.classList.remove('active');
+    }
+  });
+
+  function statusLineEl(id) {
+    return statusesEl.querySelector(`[data-status-id="${id}"]`);
+  }
+
+  function setStatusLine(id, label, text, kind) {
+    let line = statusLineEl(id);
+    if (!line) {
+      line = document.createElement('div');
+      line.dataset.statusId = id;
+      statusesEl.appendChild(line);
+    }
+    line.className = 'status-line ' + kind;
+    line.textContent = label ? `${label} — ${text}` : text;
+  }
+
+  function clearStatuses() {
+    statusesEl.innerHTML = '';
+  }
+
+  async function sendPush() {
+    const message = messageEl.value.trim();
+    const recipientIds = getSelectedRecipientIds();
+
+    if (!message) {
+      clearStatuses();
+      setStatusLine('_form', '', "Écris un message avant d'envoyer.", 'err');
+      return;
+    }
+    if (!recipientIds.length) {
+      clearStatuses();
+      setStatusLine('_form', '', "Choisis au moins un destinataire.", 'err');
+      return;
+    }
+
+    sendBtn.disabled = true;
+    clearStatuses();
+
+    const pending = [];
+
+    await Promise.all(recipientIds.map(async (recipientId) => {
+      const recipient = RECIPIENTS.find(r => r.id === recipientId);
+      const label = recipient ? recipient.label : recipientId;
+      setStatusLine(recipientId, label, "Envoi en cours…", 'pending');
+      try {
+        const res = await fetch(`${API_BASE}/api/notify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recipient: recipientId, message })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setStatusLine(recipientId, label, "Envoyé ✓ — en attente de confirmation…", 'ok');
+          pending.push({ id: data.id, recipientId, label });
+        } else {
+          setStatusLine(recipientId, label, '❌ ' + (data.error || 'Erreur inconnue'), 'err');
+        }
+      } catch (e) {
+        setStatusLine(recipientId, label, '❌ Impossible de contacter le serveur', 'err');
+      }
+    }));
+
+    sendBtn.disabled = false;
+
+    if (pending.length) {
+      messageEl.value = "";
+      presetsEl.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      checkboxes.forEach(cb => cb.checked = false);
+      refreshRowStyles();
+      savePending(pending);
+      pending.forEach(p => watchAck(p.id, p.recipientId, p.label));
     }
   }
 
-  function watchAck(id) {
-    const statusEl = document.getElementById('status');
+  function savePending(entries) {
+    try {
+      localStorage.setItem(PENDING_KEY, JSON.stringify(entries));
+    } catch (e) { /* ignore */ }
+  }
+
+  function removePending(id) {
+    try {
+      const raw = localStorage.getItem(PENDING_KEY);
+      if (!raw) return;
+      const list = JSON.parse(raw).filter(p => p.id !== id);
+      if (list.length) {
+        localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+      } else {
+        localStorage.removeItem(PENDING_KEY);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function watchAck(id, recipientId, label) {
     const maxTries = 40; // ~10 minutes à 15s d'intervalle
     let tries = 0;
 
@@ -222,22 +438,18 @@
         const data = await res.json();
         if (data.seen) {
           clearInterval(interval);
-          localStorage.removeItem(PENDING_KEY);
+          removePending(id);
           const time = new Date(data.ackAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
-          statusEl.className = 'status success';
-          statusEl.textContent = `✅ Vu par ${data.recipientLabel} à ${time}`;
+          setStatusLine(recipientId, label, `Vu à ${time} ✓`, 'ok');
           return;
         }
-        statusEl.className = 'status success';
-        statusEl.textContent = '✅ Message envoyé! En attente de confirmation...';
       } catch (e) {
-        // notif introuvable (expirée du cote serveur) — on arrete de suivre
         clearInterval(interval);
-        localStorage.removeItem(PENDING_KEY);
+        removePending(id);
       }
       if (tries >= maxTries) {
         clearInterval(interval);
-        localStorage.removeItem(PENDING_KEY);
+        removePending(id);
       }
     }
 
@@ -245,15 +457,24 @@
     const interval = setInterval(check, 15000);
   }
 
-  // Reprend le suivi d'un message envoyé avant un rafraîchissement de page
+  // Reprend le suivi des messages envoyés avant un rafraîchissement de page
   function resumePendingWatch() {
-    const id = localStorage.getItem(PENDING_KEY);
-    if (id) watchAck(id);
+    try {
+      const raw = localStorage.getItem(PENDING_KEY);
+      if (!raw) return;
+      const list = JSON.parse(raw);
+      list.forEach(p => {
+        const recipient = RECIPIENTS.find(r => r.id === p.recipientId);
+        const label = recipient ? recipient.label : p.label;
+        setStatusLine(p.recipientId, label, "Envoyé ✓ — en attente de confirmation…", 'ok');
+        watchAck(p.id, p.recipientId, label);
+      });
+    } catch (e) { /* ignore */ }
   }
 
+  sendBtn.addEventListener('click', sendPush);
+
   loadRecipients();
-  renderQuickButtons();
-  resumePendingWatch();
 </script>
 
 </body>
