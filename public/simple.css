@@ -6,8 +6,11 @@
 
 .simple-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+@media (max-width: 1100px) {
+  .simple-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 .simple-card {
@@ -15,14 +18,17 @@
   border: 1px solid var(--border);
   box-shadow: var(--card-shadow);
   border-radius: 14px;
-  padding: 22px 24px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   border-top: 4px solid var(--brand-red);
 }
-.simple-card.is-sales { border-top-color: var(--brand-navy); }
-:root[data-theme="dark"] .simple-card.is-sales { border-top-color: #4a6cb3; }
+.simple-card.cat-contracts { border-top-color: var(--brand-red); }
+.simple-card.cat-sales { border-top-color: var(--brand-navy); }
+.simple-card.cat-fabrication { border-top-color: #d97706; }
+.simple-card.cat-reparation { border-top-color: #0d9488; }
+:root[data-theme="dark"] .simple-card.cat-sales { border-top-color: #4a6cb3; }
 
 .simple-card-title {
   display: flex; align-items: center; gap: 8px;
@@ -31,11 +37,11 @@
 }
 .simple-card-title .nav-icon { width: 18px; height: 18px; color: var(--brand-red); }
 
-.simple-card-value { font-size: 40px; font-weight: 800; line-height: 1; }
+.simple-card-value { font-size: 32px; font-weight: 800; line-height: 1; }
 .simple-card-count { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
 
 .simple-compare {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
   padding-top: 12px; border-top: 1px solid var(--border);
   font-size: 14px; color: var(--text-secondary);
 }
@@ -79,7 +85,7 @@
 @media (max-width: 640px) {
   .simple-grid { grid-template-columns: 1fr; gap: 12px; }
   .simple-card { padding: 16px 18px; }
-  .simple-card-value { font-size: 32px; }
+  .simple-card-value { font-size: 30px; }
   .objective-banner { padding: 18px; }
   .objective-target { font-size: 28px; }
 }
@@ -109,4 +115,10 @@
   .fy-strip-inner { padding: 10px 14px; gap: 10px; }
   .fy-strip-year { font-size: 22px; }
   .fy-strip-week { margin-left: 0; width: 100%; }
+}
+
+/* 4 rectangles par ligne: le % passe sous "L'an dernier" partout (alignement
+   identique d'une carte a l'autre). */
+@media (min-width: 1101px) {
+  .simple-compare { flex-direction: column; align-items: flex-start; gap: 4px; }
 }
