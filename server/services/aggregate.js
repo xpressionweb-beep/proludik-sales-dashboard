@@ -756,12 +756,14 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
 }
 
 // ---------------------------------------------------------------------------
-// Vue simplifiee (page d'accueil, public/index.html): 4 rectangles + objectif
-// annuel. Separation "contrats" vs "ventes":
-//   - Contrats = dossiers IO Confirmé de type Location / Fabrication /
-//     Réparation (tout ce qui n'est pas une vente ferme de produit)
-//   - Ventes   = dossiers IO Confirmé de type Vente + boutique Shopify
-// Les deux additionnes = grandTotal utilise partout ailleurs (rien ne se perd).
+// Vue simplifiee (page d'accueil, public/index.html): 4 categories x
+// (semaine derniere, mois en cours) + objectif annuel.
+//   - Contrats    = dossiers IO Confirmé de type Location (+ 'Autre', type
+//                   non reconnu, pour que rien ne se perde dans le total)
+//   - Ventes      = dossiers IO Confirmé de type Vente + boutique Shopify
+//   - Fabrication = dossiers IO Confirmé de type Fabrication
+//   - Réparation  = dossiers IO Confirmé de type Réparation
+// Les 4 additionnees = grandTotal utilise partout ailleurs.
 //
 // Bornes de temps (memes conventions que les grandes cartes de la vue
 // complete, voir getYoY):
@@ -771,14 +773,14 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
 //     livres pour ce mois-ci"), comme le fichier de reference d'Isabelle
 // Comparatif = meme periode de l'annee financiere precedente (semaine -52,
 // meme mois l'an dernier).
-function isContractSale(sale) {
-  return sale.source === 'io' && sale.status === 'Confirmé' && sale.type !== 'Vente';
-}
+const ioConfirmed = (sale) => sale.source === 'io' && sale.status === 'Confirmé';
 
-function isProductSale(sale) {
-  if (sale.source === 'shopify') return true;
-  return sale.source === 'io' && sale.status === 'Confirmé' && sale.type === 'Vente';
-}
+const SIMPLE_CATEGORIES = {
+  contracts: (sale) => ioConfirmed(sale) && !['Vente', 'Fabrication', 'Réparation'].includes(sale.type),
+  sales: (sale) => sale.source === 'shopify' || (ioConfirmed(sale) && sale.type === 'Vente'),
+  fabrication: (sale) => ioConfirmed(sale) && sale.type === 'Fabrication',
+  reparation: (sale) => ioConfirmed(sale) && sale.type === 'Réparation',
+};
 
 function sumWhere(sales, start, end, dateField, predicate) {
   let amount = 0;
@@ -813,6 +815,12 @@ function getSimpleSummary(referenceDate = new Date()) {
     };
   };
 
+  const byCategory = (cur, ly, dateField) => {
+    const out = {};
+    for (const [key, predicate] of Object.entries(SIMPLE_CATEGORIES)) out[key] = metric(cur, ly, dateField, predicate);
+    return out;
+  };
+
   // Objectif annuel: total confirme de l'annee financiere en cours (date
   // d'evenement, comme la carte "Année financière") vs objectifs.global, et
   // l'an dernier a pareille date (1er oct. -> meme jour l'an dernier) pour
@@ -831,14 +839,8 @@ function getSimpleSummary(referenceDate = new Date()) {
   return {
     fiscalYear: fyLabel,
     previousFiscalYear: fiscalYearLabel(fyLy.start),
-    lastWeek: {
-      contracts: metric(week, weekLy, 'created', isContractSale),
-      sales: metric(week, weekLy, 'created', isProductSale),
-    },
-    currentMonth: {
-      contracts: metric(month, monthLy, 'event', isContractSale),
-      sales: metric(month, monthLy, 'event', isProductSale),
-    },
+    lastWeek: byCategory(week, weekLy, 'created'),
+    currentMonth: byCategory(month, monthLy, 'event'),
     objective: {
       target,
       amount: fyAmount,

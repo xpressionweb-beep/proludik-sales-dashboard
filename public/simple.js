@@ -8,6 +8,8 @@ const ICON_PATHS = {
   calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   contract: '<path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 13l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
   cart: '<circle cx="9" cy="20" r="1.4" fill="currentColor"/><circle cx="17" cy="20" r="1.4" fill="currentColor"/><path d="M3 4h2l2.2 11h10.6L20 8H6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  tool: '<path d="M4 20h16M6 20V10l6-5 6 5v10M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  wrench: '<path d="M14.5 5.5a4 4 0 00-5 5L4 16v4h4l5.5-5.5a4 4 0 005-5l-2.5 2.5-2.5-.5-.5-2.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
   arrowUp: '<path d="M12 19V6M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   arrowDown: '<path d="M12 5v13M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   sun: '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8L6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
@@ -132,6 +134,17 @@ function renderFiscalStrip(fiscalYear) {
   document.getElementById('fyNew').hidden = daysIn > 31;
 }
 
+const CATEGORIES = [
+  { key: 'contracts', title: 'Contrats confirmés', icon: 'contract', variant: 'cat-contracts' },
+  { key: 'sales', title: 'Ventes', icon: 'cart', variant: 'cat-sales' },
+  { key: 'fabrication', title: 'Fabrication', icon: 'tool', variant: 'cat-fabrication' },
+  { key: 'reparation', title: 'Réparation', icon: 'wrench', variant: 'cat-reparation' },
+];
+
+function categoryCards(period) {
+  return CATEGORIES.map((c) => cardHtml({ ...c, metric: period[c.key] })).join('');
+}
+
 async function loadAll() {
   const data = await fetchJson('/api/simple');
 
@@ -144,13 +157,8 @@ async function loadAll() {
 
   document.getElementById('objectiveBanner').innerHTML = objectiveHtml(data.objective, data.fiscalYear, data.previousFiscalYear);
 
-  document.getElementById('weekCards').innerHTML =
-    cardHtml({ title: 'Contrats confirmés', icon: 'contract', variant: '', metric: data.lastWeek.contracts }) +
-    cardHtml({ title: 'Ventes confirmées', icon: 'cart', variant: 'is-sales', metric: data.lastWeek.sales });
-
-  document.getElementById('monthCards').innerHTML =
-    cardHtml({ title: 'Contrats confirmés', icon: 'contract', variant: '', metric: data.currentMonth.contracts }) +
-    cardHtml({ title: 'Ventes confirmées', icon: 'cart', variant: 'is-sales', metric: data.currentMonth.sales });
+  document.getElementById('weekCards').innerHTML = categoryCards(data.lastWeek);
+  document.getElementById('monthCards').innerHTML = categoryCards(data.currentMonth);
 
   try {
     const meta = await fetchJson('/api/meta');
