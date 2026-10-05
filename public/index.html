@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="simple.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -30,10 +31,6 @@
           PROLUDIK : <span class="accent">EN TEMPS RÉEL.</span>
         </div>
         <div class="topbar-fiscal">
-          <button id="ioModeToggle" class="io-mode-btn" type="button" title="Basculer les données InflatableOffice entre Réel et Démo" disabled>
-            <span class="io-mode-dot"></span>
-            <span id="ioModeText">—</span>
-          </button>
           <button id="themeToggle" class="theme-toggle-btn" type="button" title="Changer de thème" aria-label="Changer de thème">
             <span class="nav-icon" data-icon="sun"></span>
           </button>
@@ -45,107 +42,40 @@
         </div>
       </header>
 
-      <main>
-        <section class="big-cards" id="bigCards" aria-label="Sommaire des ventes"></section>
-
-        <h2 class="section-heading">Québec vs St-Bruno <span class="muted">(mois en cours, dossiers Confirmés)</span></h2>
-        <section id="branchComparison" aria-label="Comparaison Québec vs St-Bruno"></section>
-
-        <h2 class="section-heading">Nouveaux dossiers <span class="muted">(7 derniers jours, par division — basé sur la date de création du dossier)</span></h2>
-        <section class="counters" id="newDossiers" aria-label="Nouveaux dossiers par division"></section>
-
-        <h2 class="section-heading">Par division <span class="muted">(année financière au complet, dossiers Confirmés + Shopify)</span></h2>
-        <section class="counters" id="divisions" aria-label="Fenêtres par division"></section>
-
-        <div class="content-grid">
-          <section class="card table-card">
-            <div class="card-header">
-              <h2>Performance des représentants <span class="muted">(année financière)</span></h2>
-            </div>
-            <div class="table-scroll">
-              <table class="rep-table" id="repTable">
-                <thead>
-                  <tr>
-                    <th>Représentant</th>
-                    <th>Confirmés</th>
-                    <th>Soumissions</th>
-                    <th>VRF/Contrats</th>
-                    <th>Conversion</th>
-                    <th>Objectif</th>
-                    <th>Progression</th>
-                    <th>Score</th>
-                  </tr>
-                </thead>
-                <tbody id="repTableBody"></tbody>
-              </table>
-            </div>
-            <p class="muted small table-footnote">
-              Conversion = part des ventes "Confirmé" dans le total du représentant.
-              Score = % de l'objectif annuel (même valeur que la barre de progression) —
-              vert ≥ 100%, jaune 75-99%, rouge &lt; 75%.
-            </p>
-          </section>
-
-          <aside class="side-col">
-            <section class="card alerts-card">
-              <div class="card-header">
-                <h2>Alertes</h2>
-              </div>
-              <p class="muted small alerts-placeholder">
-                Fonctionnalité à venir — nécessite des données supplémentaires
-                non disponibles aujourd'hui (suivi commercial, dépôts,
-                installations).
-              </p>
-            </section>
-          </aside>
+      <div class="fy-strip" id="fyStrip">
+        <div class="fy-strip-inner">
+          <span class="fy-strip-label">Année financière</span>
+          <span class="fy-strip-year" id="fyYear">—</span>
+          <span class="fy-strip-new" id="fyNew" hidden>Nouvelle année</span>
+          <span class="fy-strip-week" id="fyWeek"></span>
         </div>
+      </div>
 
-        <section class="card table-card">
-          <div class="card-header">
-            <h2>Ventes par mois <span class="muted">(<span id="monthlySalesFyCur">—</span> vs <span id="monthlySalesFyPrev">—</span>)</span></h2>
-          </div>
-          <div class="table-scroll">
-            <table class="rep-table" id="monthlySalesTable">
-              <thead>
-                <tr>
-                  <th rowspan="2">Mois</th>
-                  <th colspan="5" class="table-group-header">Répartition par division (dossiers Confirmés + Shopify)</th>
-                  <th rowspan="2">% vs LY</th>
-                  <th rowspan="2">$ Objectif</th>
-                  <th rowspan="2">% Atteinte</th>
-                </tr>
-                <tr>
-                  <th>Location</th>
-                  <th>Fabrication</th>
-                  <th>Réparation</th>
-                  <th>Vente</th>
-                  <th class="io-subtotal-cell">Sous-total</th>
-                </tr>
-              </thead>
-              <tbody id="monthlySalesTableBody"></tbody>
-            </table>
-          </div>
-          <p class="muted small table-footnote">
-            Location / Fabrication / Réparation / Vente = répartition du $ Conclu (dossiers Confirmés) par division, + Shopify inclus dans Vente.
-            % vs LY = variation du $ Conclu total vs le même mois l'an dernier. % Atteinte — vert ≥ 100%, jaune 75-99%, rouge &lt; 75%.
-          </p>
-        </section>
+      <main class="simple-main">
+        <section class="objective-banner" id="objectiveBanner" aria-label="Objectif annuel"></section>
+
+        <h2 class="section-heading">Semaine dernière <span class="muted" id="weekLabel"></span></h2>
+        <section class="simple-grid" id="weekCards" aria-label="Semaine dernière"></section>
+
+        <h2 class="section-heading">Mois en cours <span class="muted" id="monthLabel"></span></h2>
+        <section class="simple-grid" id="monthCards" aria-label="Mois en cours"></section>
+
+        <p class="muted small simple-footnote">
+          Contrats = dossiers Confirmés de Location, Fabrication et Réparation.
+          Ventes = dossiers Confirmés de type Vente + boutique Shopify.
+          Semaine dernière : selon la date de confirmation du dossier. Mois en cours : selon la date de l'événement.
+          Comparatif : même période l'an dernier (<span id="prevFyLabel">—</span>).
+        </p>
 
         <footer class="page-footer">
           <span id="lastUpdate">—</span>
           <span class="footer-sep">·</span>
-          <button id="syncNowBtn" class="link-btn">Synchroniser maintenant</button>
-          <span class="footer-sep">·</span>
-          <button id="resetShopifySyncBtn" class="link-btn" title="Efface la dernière sync Shopify pour forcer une resynchronisation complète depuis le début (voir SHOPIFY_INITIAL_SYNC_DAYS)">Resynchroniser Shopify (complet)</button>
-          <span class="footer-sep">·</span>
-          <span id="syncBadges"></span>
-          <span class="footer-sep" id="queuedSep" hidden>·</span>
-          <span id="queuedNotice" class="queued-notice" hidden></span>
+          <a class="link-btn" href="complet.html">Vue complète</a>
         </footer>
       </main>
     </div>
   </div>
 
-  <script src="dashboard.js"></script>
+  <script src="simple.js"></script>
 </body>
 </html>

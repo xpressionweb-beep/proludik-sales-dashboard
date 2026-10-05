@@ -755,7 +755,104 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
   return { label, quebec, stBruno, commun, fabrication, shopify, total, quebecPct, stBrunoPct, grandTotal };
 }
 
+// ---------------------------------------------------------------------------
+// Vue simplifiee (page d'accueil, public/index.html): 4 rectangles + objectif
+// annuel. Separation "contrats" vs "ventes":
+//   - Contrats = dossiers IO Confirmé de type Location / Fabrication /
+//     Réparation (tout ce qui n'est pas une vente ferme de produit)
+//   - Ventes   = dossiers IO Confirmé de type Vente + boutique Shopify
+// Les deux additionnes = grandTotal utilise partout ailleurs (rien ne se perd).
+//
+// Bornes de temps (memes conventions que les grandes cartes de la vue
+// complete, voir getYoY):
+//   - Semaine derniere: lundi-dimanche complet, selon la DATE DE CREATION du
+//     dossier ("combien a-t-on confirme la semaine passee")
+//   - Mois en cours: selon la DATE D'EVENEMENT ("combien a-t-on sur les
+//     livres pour ce mois-ci"), comme le fichier de reference d'Isabelle
+// Comparatif = meme periode de l'annee financiere precedente (semaine -52,
+// meme mois l'an dernier).
+function isContractSale(sale) {
+  return sale.source === 'io' && sale.status === 'Confirmé' && sale.type !== 'Vente';
+}
+
+function isProductSale(sale) {
+  if (sale.source === 'shopify') return true;
+  return sale.source === 'io' && sale.status === 'Confirmé' && sale.type === 'Vente';
+}
+
+function sumWhere(sales, start, end, dateField, predicate) {
+  let amount = 0;
+  const ids = new Set();
+  for (const sale of sales) {
+    const d = dateField === 'created' ? sale.createdDate || sale.orderDate : sale.orderDate;
+    if (!inRange(d, start, end) || !predicate(sale)) continue;
+    amount += sale.amount;
+    ids.add(`${sale.source}:${sale.externalId}`);
+  }
+  return { amount, count: ids.size };
+}
+
+function getSimpleSummary(referenceDate = new Date()) {
+  const sales = db.getAllSales();
+  const objectifs = loadObjectifs();
+
+  const week = getBounds('week', -1, referenceDate);
+  const weekLy = getBounds('week', -53, referenceDate);
+  const month = getBounds('month', 0, referenceDate);
+  const monthLy = getBounds('month', -12, referenceDate);
+
+  const metric = (cur, ly, dateField, predicate) => {
+    const current = sumWhere(sales, cur.start, cur.end, dateField, predicate);
+    const previous = sumWhere(sales, ly.start, ly.end, dateField, predicate);
+    return {
+      label: cur.label,
+      previousLabel: ly.label,
+      current,
+      previous,
+      changePct: pctChange(current.amount, previous.amount),
+    };
+  };
+
+  // Objectif annuel: total confirme de l'annee financiere en cours (date
+  // d'evenement, comme la carte "Année financière") vs objectifs.global, et
+  // l'an dernier a pareille date (1er oct. -> meme jour l'an dernier) pour
+  // savoir si on est en avance ou en retard sur le rythme de 2025-2026.
+  const fy = getBounds('year', 0, referenceDate);
+  const fyLy = getBounds('year', -1, referenceDate);
+  const fyLabel = fiscalYearLabel(fy.start);
+  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate() + 1);
+  const todayLy = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+  const fyAmount = computeTotals(sales, fy.start, fy.end).grandTotal;
+  const fyToDateLy = computeTotals(sales, fyLy.start, todayLy).grandTotal;
+  const fyToDate = computeTotals(sales, fy.start, today).grandTotal;
+  const fyLyTotal = computeTotals(sales, fyLy.start, fyLy.end).grandTotal;
+  const target = (objectifs.global && objectifs.global[fyLabel]) || null;
+
+  return {
+    fiscalYear: fyLabel,
+    previousFiscalYear: fiscalYearLabel(fyLy.start),
+    lastWeek: {
+      contracts: metric(week, weekLy, 'created', isContractSale),
+      sales: metric(week, weekLy, 'created', isProductSale),
+    },
+    currentMonth: {
+      contracts: metric(month, monthLy, 'event', isContractSale),
+      sales: metric(month, monthLy, 'event', isProductSale),
+    },
+    objective: {
+      target,
+      amount: fyAmount,
+      pct: target ? (fyAmount / target) * 100 : null,
+      toDate: fyToDate,
+      toDateLastYear: fyToDateLy,
+      toDateChangePct: pctChange(fyToDate, fyToDateLy),
+      lastYearTotal: fyLyTotal,
+    },
+  };
+}
+
 module.exports = {
+  getSimpleSummary,
   getBounds,
   computeTotals,
   getOverview,
