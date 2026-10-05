@@ -35,6 +35,10 @@ async function triggerSyncQuick(trigger, opts) {
   return { queued: outcome === 'queued' };
 }
 
+router.get('/simple', (req, res) => {
+  res.json(aggregate.getSimpleSummary());
+});
+
 router.get('/overview', (req, res) => {
   res.json(aggregate.getOverview());
 });

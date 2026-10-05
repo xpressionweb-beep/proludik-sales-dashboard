@@ -1,0 +1,112 @@
+/* Vue simplifiee (index.html) - s'appuie sur styles.css pour les variables
+   de theme, le header et le pied de page. */
+
+.simple-main { max-width: 1200px; width: 100%; margin: 0 auto; gap: 0; }
+.simple-main .section-heading { text-transform: uppercase; letter-spacing: 0.5px; }
+
+.simple-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.simple-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+  border-radius: 14px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 4px solid var(--brand-red);
+}
+.simple-card.is-sales { border-top-color: var(--brand-navy); }
+:root[data-theme="dark"] .simple-card.is-sales { border-top-color: #4a6cb3; }
+
+.simple-card-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.simple-card-title .nav-icon { width: 18px; height: 18px; color: var(--brand-red); }
+
+.simple-card-value { font-size: 40px; font-weight: 800; line-height: 1; }
+.simple-card-count { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+
+.simple-compare {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-top: 12px; border-top: 1px solid var(--border);
+  font-size: 14px; color: var(--text-secondary);
+}
+.simple-compare strong { color: var(--text-primary); font-weight: 700; }
+.simple-compare .delta-badge { font-size: 16px; }
+.simple-compare .delta-badge .nav-icon { width: 14px !important; height: 14px !important; }
+
+/* Bandeau objectif annuel */
+.objective-banner {
+  background: var(--brand-navy);
+  color: #fff;
+  border-radius: 14px;
+  padding: 22px 26px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 28px;
+  margin-top: 4px;
+}
+.objective-label { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.75; }
+.objective-target { font-size: 34px; font-weight: 800; line-height: 1.1; }
+.objective-progress { display: flex; flex-direction: column; gap: 8px; }
+.objective-progress-text { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+.objective-progress-text strong { font-size: 18px; color: #fff; }
+.objective-track { height: 14px; border-radius: 7px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.objective-fill { height: 100%; border-radius: 7px; background: var(--brand-red); }
+.objective-fill.good { background: #22c55e; }
+.objective-pace { text-align: right; font-size: 14px; font-weight: 600; }
+.objective-pace .pace-value { font-size: 18px; font-weight: 800; display: block; }
+.objective-pace .pace-value.up { color: #4ade80; }
+.objective-pace .pace-value.down { color: #ff7a8a; }
+.objective-pace .pace-sub { opacity: 0.75; font-weight: 500; font-size: 13px; }
+
+.simple-footnote { margin: 22px 0 6px; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .objective-banner { grid-template-columns: 1fr; gap: 16px; }
+  .objective-pace { text-align: left; }
+}
+
+@media (max-width: 640px) {
+  .simple-grid { grid-template-columns: 1fr; gap: 12px; }
+  .simple-card { padding: 16px 18px; }
+  .simple-card-value { font-size: 32px; }
+  .objective-banner { padding: 18px; }
+  .objective-target { font-size: 28px; }
+}
+
+/* Bande "Année financière" sous le header - rend le changement d'année
+   evident d'un coup d'oeil (1er octobre). */
+.topbar { border-bottom: none; }
+.fy-strip {
+  background: linear-gradient(90deg, var(--brand-red) 0%, #9e0c24 55%, var(--brand-navy) 100%);
+  color: #fff;
+}
+.fy-strip-inner {
+  max-width: 1200px; margin: 0 auto; padding: 12px 28px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.fy-strip-label { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; opacity: 0.85; }
+.fy-strip-year { font-size: 26px; font-weight: 800; letter-spacing: 0.5px; line-height: 1; }
+.fy-strip-new {
+  background: #fff; color: var(--brand-red);
+  font-size: 12px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px;
+}
+.fy-strip-new[hidden] { display: none; }
+.fy-strip-week { margin-left: auto; font-size: 14px; font-weight: 700; opacity: 0.9; }
+
+@media (max-width: 640px) {
+  .fy-strip-inner { padding: 10px 14px; gap: 10px; }
+  .fy-strip-year { font-size: 22px; }
+  .fy-strip-week { margin-left: 0; width: 100%; }
+}
