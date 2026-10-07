@@ -108,6 +108,13 @@ textarea{resize:vertical;min-height:80px}
 .today{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
 .drawn{display:flex;flex-direction:column;gap:6px}
 .drawn .who{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:600}
+.send{display:flex;gap:8px;flex-wrap:wrap}
+.send a,.send button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:6px 12px;border-radius:8px;font-family:var(--display);font-weight:700;letter-spacing:.6px;text-transform:uppercase;font-size:15px;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.send a{background:var(--navy);border-color:var(--navy);color:#fff}
+.send a:hover{filter:brightness(1.15)}
+.send button:hover{border-color:var(--muted)}
+.send svg{width:18px;height:18px}
+.send-note{font-size:12.5px;color:var(--muted)}
 .slots{display:flex;gap:6px}
 .slots i{width:28px;height:8px;border-radius:4px;background:var(--line)}
 .slots i.on{background:var(--red)}
@@ -194,7 +201,7 @@ img{max-width:100%}
 .mcard.big .logo{width:46px;height:46px}
 .mystery .logo{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:50%;background:#fff;padding:4px;opacity:.9}
 .mystery .logo img{width:100%;height:100%;object-fit:contain;display:block}
-.rep-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.rep-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) auto;gap:8px;align-items:center}
 .rep-row input{min-width:0}
 @media (max-width:560px){.rep-row{grid-template-columns:minmax(0,1fr)}}
 .reset-box{display:flex;flex-direction:column;gap:10px;align-items:flex-start;margin-top:12px;padding-top:16px;border-top:1px solid var(--line)}
@@ -271,7 +278,7 @@ img{max-width:100%}
       <summary>Équipe et réglages</summary>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
         <div id="reps" style="display:flex;flex-direction:column;gap:8px"></div>
-        <div class="rep-row"><input id="rep-new" maxlength="40" placeholder="Nom"><button class="btn btn-ghost" id="rep-add" type="button">Ajouter</button></div>
+        <div class="rep-row"><input id="rep-new" maxlength="40" placeholder="Nom"><input id="rep-new-email" type="email" maxlength="120" placeholder="courriel@proludik.com" aria-label="Courriel"><button class="btn btn-ghost" id="rep-add" type="button">Ajouter</button></div>
         <div class="form-acts"><button class="btn btn-red" id="reps-save" type="button">Enregistrer l'équipe</button></div>
         <div class="inline" style="align-items:center;margin-top:8px"><label for="per" style="font-weight:600">Missions pigées par réunion</label><input id="per" class="short" type="number" min="1" max="10"><button class="btn btn-ghost" id="per-save" type="button">Enregistrer</button></div>
         <div class="reset-box">
@@ -378,7 +385,10 @@ function render(){
   $('draw-hint').textContent=full?`Les ${per} missions de la réunion sont pigées.`:nd===0?'La boîte est vide. Ajoute une mission plus bas.':`${per-tirs.length} mission${per-tirs.length>1?'s':''} à piger aujourd'hui.`;
   // Piges du jour (cachées tant que l'animation de révélation joue)
   const shown=revealing?tirs.slice(0,-1):tirs;
-  $('today').innerHTML=shown.map(t=>`<div class="drawn"><div class="who"><span>${esc(t.rep||'Sans nom')}</span><button class="link" data-undo="${esc(t.id)}">Remettre dans la boîte</button></div>${cardHTML(defiById(t.defiId))}</div>`).join('');
+  $('today').innerHTML=shown.map(t=>{const m=missionMail(t);
+    return `<div class="drawn"><div class="who"><span>${esc(t.rep||'Sans nom')}</span><button class="link" data-undo="${esc(t.id)}">Remettre dans la boîte</button></div>${cardHTML(defiById(t.defiId))}
+    <div class="send"><a href="${esc(m.href)}">${MAIL_ICO}Courriel</a><button type="button" data-copy="${esc(t.id)}">${COPY_ICO}Copier</button></div>
+    ${m.to?'':`<div class="send-note">Aucun courriel pour ${esc(t.rep||'ce nom')} : ajoute-le dans « Équipe et réglages ».</div>`}</div>`}).join('');
   // Bilan
   const prevWeeks=S.semaines.filter(s=>s.id<S.today&&s.tirages.length);
   const show=prevWeeks.filter((s,i)=>i===0||s.tirages.some(t=>!t.resultat));
@@ -396,9 +406,9 @@ function render(){
     return `<div class="gcell${st.k==='dispo'||hideLast?'':' dim'}">${face}<div class="gfoot">${hideLast?'<span class="chip dispo">Disponible</span>':chip}${peek?`<div class="acts"><button class="link" data-edit="${d.id}">Modifier</button><button class="link" data-toggle="${d.id}">${d.actif===false?'Remettre en jeu':'Retirer'}</button></div>`:''}</div></div>`}).join('')
     :'<div class="empty">La boîte est vide. Ajoute ta première mission avec le formulaire ci-dessous.</div>';
   // Équipe (brouillon local tant que pas enregistré)
-  const reps=repsDraft||S.config.reps;
+  const reps=repsDraft||S.config.reps.map(n=>({nom:n,email:(S.config.emails||{})[n]||''}));
   if(!$('reps').contains(document.activeElement)){
-    $('reps').innerHTML=reps.map((r,i)=>`<div class="rep-row"><input data-rn="${i}" value="${esc(r)}" maxlength="40" aria-label="Nom"><button class="icon-btn" data-rmrep="${i}" type="button" aria-label="Retirer ${esc(r)}">Retirer</button></div>`).join('')||'<span class="hint">Aucun nom encore.</span>';
+    $('reps').innerHTML=reps.map((r,i)=>`<div class="rep-row"><input data-rn="${i}" value="${esc(r.nom)}" maxlength="40" aria-label="Nom"><input data-re="${i}" type="email" value="${esc(r.email)}" maxlength="120" placeholder="courriel@proludik.com" aria-label="Courriel de ${esc(r.nom)}"><button class="icon-btn" data-rmrep="${i}" type="button" aria-label="Retirer ${esc(r.nom)}">Retirer</button></div>`).join('')||'<span class="hint">Aucun nom encore.</span>';
   }
   if(document.activeElement!==$('per')) $('per').value=per;
   // Historique
@@ -442,6 +452,7 @@ document.addEventListener('click',async e=>{
   if(b.dataset.v) next=await act(()=>api('/verdict',{method:'POST',body:{semaineId:b.dataset.week,tirageId:b.dataset.t,verdict:b.dataset.v}}));
   if(b.dataset.toggle) next=await act(()=>api(`/defis/${b.dataset.toggle}/toggle`,{method:'POST'}));
   if(b.dataset.edit){const d=defiById(b.dataset.edit);editing=d.id;$('f-l1').value=d.l1||'';$('f-l2').value=d.l2||'';$('f-desc').value=d.desc||'';formIcon=d.icone||'fusee';$('h-add').textContent=`Modifier la mission ${d.num}`;$('f-save').textContent='Enregistrer';$('f-cancel').hidden=false;renderPreview();$('add-panel').scrollIntoView({behavior:'smooth'});}
+  if(b.dataset.copy){copyMission(b.dataset.copy);return}
   if(b.dataset.icon){formIcon=b.dataset.icon;renderPreview();}
   if(b.dataset.rmrep){b.blur();repsDraft=readReps().filter((_,i)=>i!==Number(b.dataset.rmrep));render();}
   if(next){S=next;render();}
@@ -455,16 +466,47 @@ $('f-save').onclick=async()=>{
   if(next){S=next;toast(editing?'Mission modifiée.':'Mission ajoutée à la boîte.');resetForm();render();}
 };
 
+// Courriel / copie de la mission (ouvre l'Outlook de l'animateur, rien n'est envoyé par le serveur)
+const MAIL_ICO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+const COPY_ICO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+function missionText(t){
+  const d=defiById(t.defiId), titre=[d.l1,d.l2].filter(Boolean).join(' ');
+  const prenom=t.rep||'';
+  return {titre,body:`Salut${prenom?' '+prenom:''},
+
+Voici ta mission Le Boost de la semaine :
+
+MISSION ${d.num} : ${titre}
+${d.desc}
+
+On fait le bilan à la réunion du ${fr(addDays(S.today,7))}.
+
+Bonne chasse!
+Jérôme`};
+}
+function missionMail(t){
+  const to=(S.config.emails||{})[t.rep]||'';
+  const {titre,body}=missionText(t);
+  const subject=`Le Boost : ta mission de la semaine, ${titre}`;
+  return {to,href:`mailto:${encodeURIComponent(to).replace(/%40/g,'@')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`};
+}
+async function copyMission(id){
+  const t=todayWeek()?.tirages.find(x=>x.id===id); if(!t) return;
+  const txt=missionText(t).body;
+  try{await navigator.clipboard.writeText(txt);toast('Mission copiée. Colle-la dans Teams ou un courriel.')}
+  catch(_){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Mission copiée.')}catch(e){toast('Copie impossible, sélectionne le texte à la main.')}ta.remove()}
+}
+
 // Équipe
 function readReps(){
   const rows=[...$('reps').querySelectorAll('.rep-row')];
-  return rows.map(r=>r.querySelector('[data-rn]').value.trim()).filter(Boolean);
+  return rows.map(r=>({nom:r.querySelector('[data-rn]').value.trim(),email:r.querySelector('[data-re]').value.trim()})).filter(r=>r.nom);
 }
 $('reps').addEventListener('input',()=>{repsDraft=readReps()});
-$('rep-add').onclick=()=>{const nom=$('rep-new').value.trim();if(!nom)return;
-  const cur=readReps();if(cur.includes(nom)){toast('Ce nom est déjà là.');return}
-  repsDraft=[...cur,nom];$('rep-new').value='';render();toast("Clique « Enregistrer l'équipe » pour garder le changement.");};
-$('reps-save').onclick=async()=>{const next=await act(()=>api('/config',{method:'PUT',body:{reps:readReps()}}));if(next){S=next;repsDraft=null;render();toast('Équipe enregistrée.')}};
+$('rep-add').onclick=()=>{const nom=$('rep-new').value.trim(),email=$('rep-new-email').value.trim();if(!nom)return;
+  const cur=readReps();if(cur.some(r=>r.nom===nom)){toast('Ce nom est déjà là.');return}
+  repsDraft=[...cur,{nom,email}];$('rep-new').value='';$('rep-new-email').value='';render();toast("Clique « Enregistrer l'équipe » pour garder le changement.");};
+$('reps-save').onclick=async()=>{const list=readReps();const next=await act(()=>api('/config',{method:'PUT',body:{reps:list.map(r=>r.nom),emails:Object.fromEntries(list.map(r=>[r.nom,r.email]))}}));if(next){S=next;repsDraft=null;render();toast('Équipe enregistrée.')}};
 $('per-save').onclick=async()=>{const next=await act(()=>api('/config',{method:'PUT',body:{parReunion:$('per').value}}));if(next){S=next;render();toast('Réglage enregistré.')}};
 
 // Remise à zéro (confirmation dans la page)

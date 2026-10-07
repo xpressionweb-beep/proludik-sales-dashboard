@@ -624,6 +624,7 @@ Page `boost.html` pour la réunion ventes et marketing du mardi. On partage l'é
 - **Pige** : le tirage au sort se fait sur le serveur, parmi les missions disponibles. 3 piges par réunion par défaut (réglable dans « Équipe et réglages »).
 - **Missions cachées** : dans la grille, une mission non pigée s'affiche comme une carte « ? ». Le bouton « Mode animateur » montre le contenu et donne accès à Modifier / Retirer.
 - **Bilan** : une mission réussie sort de la boîte pendant 6 semaines; une mission pas réussie y retourne tout de suite.
+- **Envoyer la mission** : sous chaque mission pigée, « Courriel » ouvre l'Outlook de l'animateur avec le message prêt (adresse, objet, mission, date du bilan); il reste à cliquer Envoyer. « Copier » copie le même texte pour le coller dans Teams. Les courriels de l'équipe se règlent dans « Équipe et réglages ». Rien n'est envoyé par le serveur, aucune configuration Microsoft requise.
 - **Remise à zéro** : dans « Équipe et réglages », efface les piges, bilans et l'historique (garde les missions et l'équipe). Pratique après des tests.
 - **Données** : tout est dans `boost.json`, dans `DATA_DIR` (le disque persistant). Les 15 missions de départ (`server/boost/defaultDefis.js`) servent seulement si le fichier n'existe pas encore.
 
