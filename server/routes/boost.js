@@ -92,6 +92,14 @@ router.put('/config', (req, res) => mutate(res, (state) => {
       .map((r) => clean(typeof r === 'string' ? r : r.nom, 40))
       .filter(Boolean);
   }
+  if (req.body.emails && typeof req.body.emails === 'object') {
+    const emails = {};
+    for (const nom of state.config.reps) {
+      const e = clean(req.body.emails[nom], 120).toLowerCase();
+      if (e) emails[nom] = e;
+    }
+    state.config.emails = emails;
+  }
   if (req.body.parReunion) state.config.parReunion = Math.max(1, Math.min(10, parseInt(req.body.parReunion, 10) || 3));
 }));
 

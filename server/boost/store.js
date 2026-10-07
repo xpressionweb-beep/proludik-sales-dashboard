@@ -14,6 +14,12 @@ const REPOS_JOURS = 42;
 const TZ = 'America/Toronto';
 
 const DEFAULT_REPS = ['Cédric', 'Mathis', 'Didier'];
+// Courriels par nom, utilisés par le bouton « Courriel » (ouvre Outlook).
+const DEFAULT_EMAILS = {
+  'Cédric': 'cedric@proludik.com',
+  Mathis: 'mathis@proludik.com',
+  Didier: 'didier@proludik.com',
+};
 
 // Date du jour (AAAA-MM-JJ) à l'heure de Montréal/Québec, pas en UTC:
 // Render tourne en UTC, une réunion à 20h serait sinon datée du lendemain.
@@ -33,7 +39,7 @@ function load() {
     const seed = {
       defis: DEFAULT_DEFIS.map((d) => ({ ...d, actif: true })),
       semaines: [],
-      config: { reps: DEFAULT_REPS, parReunion: 3 },
+      config: { reps: DEFAULT_REPS, emails: DEFAULT_EMAILS, parReunion: 3 },
     };
     save(seed);
     return seed;
@@ -42,6 +48,8 @@ function load() {
   s.defis = s.defis || [];
   s.semaines = s.semaines || [];
   s.config = { reps: [], parReunion: 3, ...(s.config || {}) };
+  // Fichiers créés avant l'ajout des courriels: on préremplit l'équipe connue.
+  if (!s.config.emails) s.config.emails = { ...DEFAULT_EMAILS };
   return s;
 }
 
