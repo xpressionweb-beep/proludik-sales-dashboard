@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const store = require('../boost/store');
-const mail = require('../boost/graphMail');
-const { missionEmail } = require('../boost/emailTemplate');
 
 // API de la boîte à missions "Le Boost" (page public/boost.html).
 // Le tirage au sort se fait ici, côté serveur: le contenu des missions
@@ -15,7 +13,6 @@ function publicState(state) {
   return {
     today: ref,
     reposJours: store.REPOS_JOURS,
-    mailReady: mail.isConfigured(),
     config: state.config,
     semaines: [...state.semaines].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 30),
     defis: [...state.defis].sort((a, b) => a.num - b.num).map((d) => ({ ...d, statut: store.statusOf(state, d.id, ref) })),
@@ -88,43 +85,14 @@ router.post('/defis/:id/toggle', (req, res) => mutate(res, (state) => {
   d.actif = d.actif === false;
 }));
 
-// Équipe (nom + courriel) et nombre de piges par réunion
+// Équipe et nombre de piges par réunion
 router.put('/config', (req, res) => mutate(res, (state) => {
   if (Array.isArray(req.body.reps)) {
     state.config.reps = req.body.reps
-      .map((r) => ({ nom: clean(r.nom, 40), email: clean(r.email, 120).toLowerCase() }))
-      .filter((r) => r.nom);
+      .map((r) => clean(typeof r === 'string' ? r : r.nom, 40))
+      .filter(Boolean);
   }
   if (req.body.parReunion) state.config.parReunion = Math.max(1, Math.min(10, parseInt(req.body.parReunion, 10) || 3));
 }));
-
-// Envoyer à chaque représentant sa mission pigée aujourd'hui
-router.post('/send-emails', async (req, res) => {
-  if (!mail.isConfigured()) return res.status(400).json({ error: "L'envoi Outlook n'est pas encore configuré sur le serveur." });
-  const state = store.load();
-  const ref = store.today();
-  const w = store.week(state, ref);
-  if (!w || !w.tirages.length) return res.status(400).json({ error: 'Aucune mission pigée aujourd\'hui.' });
-
-  const only = req.body.tirageId;
-  const results = [];
-  for (const t of w.tirages) {
-    if (only && t.id !== only) continue;
-    if (!only && t.emailedAt) continue; // déjà envoyé: on ne renvoie pas en double
-    const rep = state.config.reps.find((r) => r.nom === t.rep);
-    if (!rep || !rep.email) { results.push({ rep: t.rep || 'Sans nom', ok: false, error: 'Aucun courriel pour ce nom' }); continue; }
-    const d = state.defis.find((x) => x.id === t.defiId);
-    try {
-      await mail.sendMail({ to: rep.email, ...missionEmail({ rep, defi: d, date: ref, bilan: store.addDays(ref, 7) }) });
-      t.emailedAt = new Date().toISOString();
-      t.emailedTo = rep.email;
-      results.push({ rep: rep.nom, ok: true });
-    } catch (e) {
-      results.push({ rep: rep.nom, ok: false, error: e.message });
-    }
-  }
-  store.save(state);
-  res.json({ results, state: publicState(state) });
-});
 
 module.exports = router;

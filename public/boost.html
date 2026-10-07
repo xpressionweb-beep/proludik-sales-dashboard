@@ -194,10 +194,7 @@ img{max-width:100%}
 .mcard.big .logo{width:46px;height:46px}
 .mystery .logo{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:50%;background:#fff;padding:4px;opacity:.9}
 .mystery .logo img{width:100%;height:100%;object-fit:contain;display:block}
-.mail-bar{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
-.mail-state{font-size:13px;font-weight:600}
-.mail-state.ok{color:var(--ok)} .mail-state.ko{color:var(--ko)} .mail-state.wait{color:var(--muted)}
-.rep-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) auto;gap:8px;align-items:center}
+.rep-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
 .rep-row input{min-width:0}
 @media (max-width:560px){.rep-row{grid-template-columns:minmax(0,1fr)}}
 .icon-btn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:8px;height:40px;padding:0 12px}
@@ -232,10 +229,6 @@ img{max-width:100%}
         </div>
       </div>
       <div class="today" id="today"></div>
-      <div class="mail-bar" id="mail-bar" hidden>
-        <button class="btn btn-red" id="mail-btn" type="button">Envoyer les missions par courriel</button>
-        <p class="hint" id="mail-hint"></p>
-      </div>
     </section>
 
     <section class="panel" aria-labelledby="h-bilan">
@@ -274,9 +267,8 @@ img{max-width:100%}
     <details>
       <summary>Équipe et réglages</summary>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
-        <p class="hint">Le courriel sert à envoyer la mission pigée au représentant.</p>
         <div id="reps" style="display:flex;flex-direction:column;gap:8px"></div>
-        <div class="rep-row"><input id="rep-new" maxlength="40" placeholder="Nom"><input id="rep-new-email" type="email" maxlength="120" placeholder="courriel@proludik.com"><button class="btn btn-ghost" id="rep-add" type="button">Ajouter</button></div>
+        <div class="rep-row"><input id="rep-new" maxlength="40" placeholder="Nom"><button class="btn btn-ghost" id="rep-add" type="button">Ajouter</button></div>
         <div class="form-acts"><button class="btn btn-red" id="reps-save" type="button">Enregistrer l'équipe</button></div>
         <div class="inline" style="align-items:center;margin-top:8px"><label for="per" style="font-weight:600">Missions pigées par réunion</label><input id="per" class="short" type="number" min="1" max="10"><button class="btn btn-ghost" id="per-save" type="button">Enregistrer</button></div>
       </div>
@@ -371,23 +363,14 @@ function render(){
   $('box-count').innerHTML=`${nd}<small>dans la boîte</small>`;
   // Sélecteur
   const sel=$('rep-sel'), prev=sel.value, deja=new Set(tirs.map(t=>t.rep));
-  sel.innerHTML='<option value="">— Choisir —</option>'+S.config.reps.map(r=>`<option value="${esc(r.nom)}">${esc(r.nom)}${deja.has(r.nom)?' (déjà pigé)':''}</option>`).join('');
-  if(S.config.reps.some(r=>r.nom===prev)) sel.value=prev;
+  sel.innerHTML='<option value="">— Choisir —</option>'+S.config.reps.map(r=>`<option value="${esc(r)}">${esc(r)}${deja.has(r)?' (déjà pigé)':''}</option>`).join('');
+  if(S.config.reps.includes(prev)) sel.value=prev;
   const full=tirs.length>=per;
   $('draw-btn').disabled=full||nd===0;
   $('draw-hint').textContent=full?`Les ${per} missions de la réunion sont pigées.`:nd===0?'La boîte est vide. Ajoute une mission plus bas.':`${per-tirs.length} mission${per-tirs.length>1?'s':''} à piger aujourd'hui.`;
   // Piges du jour (cachées tant que l'animation de révélation joue)
   const shown=revealing?tirs.slice(0,-1):tirs;
-  $('today').innerHTML=shown.map(t=>{
-    const rep=S.config.reps.find(r=>r.nom===t.rep);
-    const ms=t.emailedAt?`<span class="mail-state ok">Courriel envoyé à ${esc(t.emailedTo)}</span> <button class="link" data-resend="${esc(t.id)}">Renvoyer</button>`
-      :rep?.email?'<span class="mail-state wait">Courriel pas encore envoyé</span>':'<span class="mail-state ko">Aucun courriel pour ce nom</span>';
-    return `<div class="drawn"><div class="who"><span>${esc(t.rep||'Sans nom')}</span>${t.emailedAt?'':`<button class="link" data-undo="${esc(t.id)}">Remettre dans la boîte</button>`}</div>${cardHTML(defiById(t.defiId))}<div>${ms}</div></div>`}).join('');
-  // Barre courriel
-  const pending=shown.filter(t=>!t.emailedAt);
-  $('mail-bar').hidden=!shown.length;
-  $('mail-btn').disabled=!S.mailReady||!pending.length;
-  $('mail-hint').textContent=!S.mailReady?"L'envoi Outlook n'est pas encore configuré sur le serveur (voir le README).":pending.length?`${pending.length} courriel${pending.length>1?'s':''} à envoyer.`:'Tous les courriels sont envoyés.';
+  $('today').innerHTML=shown.map(t=>`<div class="drawn"><div class="who"><span>${esc(t.rep||'Sans nom')}</span><button class="link" data-undo="${esc(t.id)}">Remettre dans la boîte</button></div>${cardHTML(defiById(t.defiId))}</div>`).join('');
   // Bilan
   const prevWeeks=S.semaines.filter(s=>s.id<S.today&&s.tirages.length);
   const show=prevWeeks.filter((s,i)=>i===0||s.tirages.some(t=>!t.resultat));
@@ -407,7 +390,7 @@ function render(){
   // Équipe (brouillon local tant que pas enregistré)
   const reps=repsDraft||S.config.reps;
   if(!$('reps').contains(document.activeElement)){
-    $('reps').innerHTML=reps.map((r,i)=>`<div class="rep-row"><input data-rn="${i}" value="${esc(r.nom)}" maxlength="40" aria-label="Nom"><input data-re="${i}" type="email" value="${esc(r.email||'')}" maxlength="120" placeholder="courriel@proludik.com" aria-label="Courriel de ${esc(r.nom)}"><button class="icon-btn" data-rmrep="${i}" type="button" aria-label="Retirer ${esc(r.nom)}">Retirer</button></div>`).join('')||'<span class="hint">Aucun nom encore.</span>';
+    $('reps').innerHTML=reps.map((r,i)=>`<div class="rep-row"><input data-rn="${i}" value="${esc(r)}" maxlength="40" aria-label="Nom"><button class="icon-btn" data-rmrep="${i}" type="button" aria-label="Retirer ${esc(r)}">Retirer</button></div>`).join('')||'<span class="hint">Aucun nom encore.</span>';
   }
   if(document.activeElement!==$('per')) $('per').value=per;
   // Historique
@@ -441,14 +424,6 @@ $('draw-btn').onclick=draw;
 $('box').onclick=draw;
 $('rv-close').onclick=()=>{$('reveal').hidden=true;revealing=false;render()};
 
-$('mail-btn').onclick=async()=>{
-  $('mail-btn').disabled=true;$('mail-hint').textContent='Envoi en cours…';
-  const r=await act(()=>api('/send-emails',{method:'POST',body:{}}));
-  if(!r){render();return}
-  S=r.state;render();
-  const ko=r.results.filter(x=>!x.ok), ok=r.results.length-ko.length;
-  toast(ko.length?`${ok} envoyé${ok>1?'s':''}. Problème : ${ko.map(x=>`${x.rep} (${x.error})`).join(', ')}`:`${ok} courriel${ok>1?'s':''} envoyé${ok>1?'s':''}.`);
-};
 
 $('peek-btn').onclick=()=>{peek=!peek;$('peek-btn').setAttribute('aria-pressed',peek);$('peek-btn').textContent=peek?'Cacher les missions':'Mode animateur : voir les missions';if(!peek&&editing)resetForm();render();};
 
@@ -456,7 +431,6 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('button'); if(!b||!S) return;
   let next=null;
   if(b.dataset.undo) next=await act(()=>api('/undo',{method:'POST',body:{tirageId:b.dataset.undo}}));
-  if(b.dataset.resend){const r=await act(()=>api('/send-emails',{method:'POST',body:{tirageId:b.dataset.resend}}));if(r){next=r.state;const x=r.results[0];toast(x?.ok?`Courriel renvoyé à ${x.rep}.`:`Échec : ${x?.error||'inconnu'}`)}}
   if(b.dataset.v) next=await act(()=>api('/verdict',{method:'POST',body:{semaineId:b.dataset.week,tirageId:b.dataset.t,verdict:b.dataset.v}}));
   if(b.dataset.toggle) next=await act(()=>api(`/defis/${b.dataset.toggle}/toggle`,{method:'POST'}));
   if(b.dataset.edit){const d=defiById(b.dataset.edit);editing=d.id;$('f-l1').value=d.l1||'';$('f-l2').value=d.l2||'';$('f-desc').value=d.desc||'';formIcon=d.icone||'fusee';$('h-add').textContent=`Modifier la mission ${d.num}`;$('f-save').textContent='Enregistrer';$('f-cancel').hidden=false;renderPreview();$('add-panel').scrollIntoView({behavior:'smooth'});}
@@ -476,12 +450,12 @@ $('f-save').onclick=async()=>{
 // Équipe
 function readReps(){
   const rows=[...$('reps').querySelectorAll('.rep-row')];
-  return rows.map(r=>({nom:r.querySelector('[data-rn]').value.trim(),email:r.querySelector('[data-re]').value.trim()})).filter(r=>r.nom);
+  return rows.map(r=>r.querySelector('[data-rn]').value.trim()).filter(Boolean);
 }
 $('reps').addEventListener('input',()=>{repsDraft=readReps()});
-$('rep-add').onclick=()=>{const nom=$('rep-new').value.trim(),email=$('rep-new-email').value.trim();if(!nom)return;
-  const cur=readReps();if(cur.some(r=>r.nom===nom)){toast('Ce nom est déjà là.');return}
-  repsDraft=[...cur,{nom,email}];$('rep-new').value='';$('rep-new-email').value='';render();toast("Clique « Enregistrer l'équipe » pour garder le changement.");};
+$('rep-add').onclick=()=>{const nom=$('rep-new').value.trim();if(!nom)return;
+  const cur=readReps();if(cur.includes(nom)){toast('Ce nom est déjà là.');return}
+  repsDraft=[...cur,nom];$('rep-new').value='';render();toast("Clique « Enregistrer l'équipe » pour garder le changement.");};
 $('reps-save').onclick=async()=>{const next=await act(()=>api('/config',{method:'PUT',body:{reps:readReps()}}));if(next){S=next;repsDraft=null;render();toast('Équipe enregistrée.')}};
 $('per-save').onclick=async()=>{const next=await act(()=>api('/config',{method:'PUT',body:{parReunion:$('per').value}}));if(next){S=next;render();toast('Réglage enregistré.')}};
 

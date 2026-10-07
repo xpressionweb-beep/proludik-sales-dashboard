@@ -13,11 +13,7 @@ const FILE = path.join(DATA_DIR, 'boost.json');
 const REPOS_JOURS = 42;
 const TZ = 'America/Toronto';
 
-const DEFAULT_REPS = [
-  { nom: 'Cédric', email: 'cedric@proludik.com' },
-  { nom: 'Mathis', email: 'mathis@proludik.com' },
-  { nom: 'Didier', email: 'didier@proludik.com' },
-];
+const DEFAULT_REPS = ['Cédric', 'Mathis', 'Didier'];
 
 // Date du jour (AAAA-MM-JJ) à l'heure de Montréal/Québec, pas en UTC:
 // Render tourne en UTC, une réunion à 20h serait sinon datée du lendemain.
