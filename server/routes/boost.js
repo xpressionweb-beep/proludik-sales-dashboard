@@ -95,4 +95,11 @@ router.put('/config', (req, res) => mutate(res, (state) => {
   if (req.body.parReunion) state.config.parReunion = Math.max(1, Math.min(10, parseInt(req.body.parReunion, 10) || 3));
 }));
 
+// Remise à zéro: efface toutes les piges et tous les bilans.
+// Les missions (et celles ajoutées) et l'équipe sont conservées.
+router.post('/reset', (req, res) => mutate(res, (state) => {
+  if (req.body.confirm !== 'ZERO') return 'Confirmation manquante.';
+  state.semaines = [];
+}));
+
 module.exports = router;

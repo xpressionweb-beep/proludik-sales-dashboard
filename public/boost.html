@@ -197,6 +197,9 @@ img{max-width:100%}
 .rep-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
 .rep-row input{min-width:0}
 @media (max-width:560px){.rep-row{grid-template-columns:minmax(0,1fr)}}
+.reset-box{display:flex;flex-direction:column;gap:10px;align-items:flex-start;margin-top:12px;padding-top:16px;border-top:1px solid var(--line)}
+.reset-box p{margin:2px 0 0}
+.reset-confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:600;color:var(--ko)}
 .icon-btn{border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:8px;height:40px;padding:0 12px}
 .icon-btn:hover{color:var(--ko);border-color:var(--ko)}
 </style>
@@ -271,6 +274,11 @@ img{max-width:100%}
         <div class="rep-row"><input id="rep-new" maxlength="40" placeholder="Nom"><button class="btn btn-ghost" id="rep-add" type="button">Ajouter</button></div>
         <div class="form-acts"><button class="btn btn-red" id="reps-save" type="button">Enregistrer l'équipe</button></div>
         <div class="inline" style="align-items:center;margin-top:8px"><label for="per" style="font-weight:600">Missions pigées par réunion</label><input id="per" class="short" type="number" min="1" max="10"><button class="btn btn-ghost" id="per-save" type="button">Enregistrer</button></div>
+        <div class="reset-box">
+          <div><strong>Remise à zéro</strong><p class="hint">Efface toutes les piges, les bilans et l'historique. Toutes les missions retournent dans la boîte. Les missions et l'équipe restent.</p></div>
+          <button class="btn btn-ghost" id="reset-btn" type="button">Tout remettre à zéro</button>
+          <div class="reset-confirm" id="reset-confirm" hidden><span>Sûr ? Ça ne se défait pas.</span><button class="btn btn-red" id="reset-yes" type="button">Oui, effacer</button><button class="btn btn-ghost" id="reset-no" type="button">Annuler</button></div>
+        </div>
       </div>
     </details>
   </section>
@@ -458,6 +466,11 @@ $('rep-add').onclick=()=>{const nom=$('rep-new').value.trim();if(!nom)return;
   repsDraft=[...cur,nom];$('rep-new').value='';render();toast("Clique « Enregistrer l'équipe » pour garder le changement.");};
 $('reps-save').onclick=async()=>{const next=await act(()=>api('/config',{method:'PUT',body:{reps:readReps()}}));if(next){S=next;repsDraft=null;render();toast('Équipe enregistrée.')}};
 $('per-save').onclick=async()=>{const next=await act(()=>api('/config',{method:'PUT',body:{parReunion:$('per').value}}));if(next){S=next;render();toast('Réglage enregistré.')}};
+
+// Remise à zéro (confirmation dans la page)
+$('reset-btn').onclick=()=>{$('reset-confirm').hidden=false;$('reset-btn').hidden=true;$('reset-yes').focus()};
+$('reset-no').onclick=()=>{$('reset-confirm').hidden=true;$('reset-btn').hidden=false};
+$('reset-yes').onclick=async()=>{const next=await act(()=>api('/reset',{method:'POST',body:{confirm:'ZERO'}}));$('reset-confirm').hidden=true;$('reset-btn').hidden=false;if(next){S=next;render();toast('Tout est remis à zéro.')}};
 
 // Chargement + rafraîchissement (si la page est ouverte sur 2 écrans)
 async function refresh(){
