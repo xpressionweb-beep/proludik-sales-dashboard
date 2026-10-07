@@ -616,3 +616,13 @@ config/
 Toutes les routes ci-dessus (et les pages statiques) exigent une
 authentification HTTP Basic si `DASHBOARD_USER`/`DASHBOARD_PASSWORD` sont
 configurés (voir "Protection par mot de passe").
+
+## Le Boost (boîte à missions)
+
+Page `boost.html` pour la réunion ventes et marketing du mardi. On partage l'écran dans Teams, chaque représentant pige une mission, et la semaine suivante on coche réussie ou pas réussie.
+
+- **Pige** : le tirage au sort se fait sur le serveur, parmi les missions disponibles. 3 piges par réunion par défaut (réglable dans « Équipe et réglages »).
+- **Missions cachées** : dans la grille, une mission non pigée s'affiche comme une carte « ? ». Le bouton « Mode animateur » montre le contenu et donne accès à Modifier / Retirer.
+- **Bilan** : une mission réussie sort de la boîte pendant 6 semaines; une mission pas réussie y retourne tout de suite.
+- **Données** : tout est dans `boost.json`, dans `DATA_DIR` (le disque persistant). Les 15 missions de départ (`server/boost/defaultDefis.js`) servent seulement si le fichier n'existe pas encore.
+

@@ -3,6 +3,7 @@ const express = require('express');
 const config = require('./config');
 const apiRoutes = require('./routes/api');
 const notifyRoutes = require('./routes/notify');
+const boostRoutes = require('./routes/boost');
 const scheduler = require('./scheduler');
 const { logOutboundIp } = require('./diagnostics');
 const basicAuth = require('./basicAuth');
@@ -17,6 +18,7 @@ app.use(basicAuth);
 app.use(express.json());
 app.use('/api', apiRoutes);
 app.use('/api/notify', notifyRoutes);
+app.use('/api/boost', boostRoutes);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.listen(config.port, () => {
