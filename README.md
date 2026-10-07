@@ -616,3 +616,27 @@ config/
 Toutes les routes ci-dessus (et les pages statiques) exigent une
 authentification HTTP Basic si `DASHBOARD_USER`/`DASHBOARD_PASSWORD` sont
 configurés (voir "Protection par mot de passe").
+
+## Le Boost (boîte à missions)
+
+Page `boost.html` pour la réunion ventes et marketing du mardi. On partage l'écran dans Teams, chaque représentant pige une mission, et la semaine suivante on coche réussie ou pas réussie.
+
+- **Pige** : le tirage au sort se fait sur le serveur, parmi les missions disponibles. 3 piges par réunion par défaut (réglable dans « Équipe et réglages »).
+- **Missions cachées** : dans la grille, une mission non pigée s'affiche comme une carte « ? ». Le bouton « Mode animateur » montre le contenu et donne accès à Modifier / Retirer.
+- **Bilan** : une mission réussie sort de la boîte pendant 6 semaines; une mission pas réussie y retourne tout de suite.
+- **Courriels** : le bouton « Envoyer les missions par courriel » envoie à chaque représentant sa mission du jour, depuis la boîte Outlook `BOOST_MAIL_FROM`. Les courriels déjà envoyés ne repartent pas en double (bouton « Renvoyer » au besoin).
+- **Données** : tout est dans `boost.json`, dans `DATA_DIR` (le disque persistant). Les 15 missions de départ (`server/boost/defaultDefis.js`) servent seulement si le fichier n'existe pas encore.
+
+### Configurer l'envoi Outlook (une seule fois)
+
+Il faut un compte administrateur Microsoft 365 de Proludik.
+
+1. Aller sur https://entra.microsoft.com > **Applications** > **Inscriptions d'applications** > **Nouvelle inscription**. Nom : `Proludik Dashboard`. Comptes de cet annuaire seulement. Pas d'URI de redirection.
+2. Noter l'**ID d'application (client)** → `MS_CLIENT_ID`, et l'**ID de l'annuaire (locataire)** → `MS_TENANT_ID`.
+3. **Certificats et secrets** > **Nouveau secret client** (24 mois). Copier la **Valeur** tout de suite → `MS_CLIENT_SECRET`.
+4. **Autorisations de l'API** > Ajouter > **Microsoft Graph** > **Autorisations d'application** > `Mail.Send`. Puis **Accorder un consentement d'administrateur**.
+5. Dans Render > le service > **Environment**, ajouter les 4 variables (`MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `BOOST_MAIL_FROM`) et redéployer.
+
+Recommandé : `Mail.Send` en mode application permet d'envoyer au nom de n'importe quelle boîte de l'organisation. Pour limiter l'app à une seule boîte, un admin Exchange peut créer une *Application Access Policy* (`New-ApplicationAccessPolicy -AccessRight RestrictAccess`) visant `BOOST_MAIL_FROM`.
+
+La même inscription d'app pourra servir plus tard pour lire le fichier Excel SharePoint (ajouter `Sites.Read.All` / `Files.Read.All`).
