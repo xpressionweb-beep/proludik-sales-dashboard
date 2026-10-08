@@ -635,7 +635,8 @@ Page `absences.html`, qui remplace le fichier Excel « Absences ». Les employé
 
 - **Accès séparé du dashboard** : la page et `/api/absences/*` ne demandent PAS le mot de passe du dashboard (les employés n'ont pas accès aux ventes). Chacun se connecte avec son nom + un NIP personnel (4 à 8 chiffres); la session dure 30 jours. 5 NIP ratés = 15 min de blocage pour ce nom.
 - **Rôles** (onglet Gestion) : *Employé* (calendrier + ses demandes), *Paye* (voit tout + rapport paye), *Admin* (approuve, saisit pour les autres, gère employés/NIP/fériés).
-- **Démarrage** : mettre `ABSENCES_ADMIN_PIN` dans Render. Jérôme se connecte avec ce NIP, l'app lui fait choisir son NIP perso, puis il crée le NIP de chaque employé dans Gestion.
+- **Démarrage** : mettre `ABSENCES_ADMIN_PIN` dans Render. Jérôme se connecte avec ce NIP, l'app lui fait choisir son NIP perso.
+- **Codes d'activation** : dans Gestion, « Codes pour tous ceux pas encore activés » (ou le bouton d'un employé) génère un code à usage unique, valide 14 jours, affiché une seule fois (copier ou imprimer des fiches). L'employé choisit son nom, entre le code et choisit lui-même son NIP; l'admin ne connaît jamais les NIP. « NIP oublié » = nouveau code; l'ancien NIP reste bon jusqu'à l'activation, puis ses anciennes sessions sont coupées. Les codes sont stockés hachés.
 - **Demandes** : statut En attente → Approuvée / Refusée. L'employé peut annuler une demande en attente; une absence approuvée ne s'annule que par l'admin. Les chevauchements et les périodes sans jour ouvrable sont refusés. Demi-journée possible sur une journée seule.
 - **Avis** : chaque nouvelle demande envoie un Pushover à `ABSENCES_PUSHOVER_DEVICE` (défaut `iphone-je`) avec un lien vers l'onglet À approuver.
 - **Confidentialité** : un employé voit les absences des collègues comme « Absent », sans le type (ex. maladie) ni la note. Paye et Admin voient le détail.
