@@ -22,7 +22,7 @@ const ROLES = ['employe', 'paye', 'admin'];
 
 // Staff bureau repris de l'ancien fichier Excel. Jérôme = admin (approuve).
 const DEFAULT_STAFF = [
-  ['André', 'employe'], ['Isabelle', 'employe'], ['Rosalie', 'employe'],
+  ['André', 'employe'], ['Isabelle', 'paye'], ['Rosalie', 'paye'],
   ['Jérôme', 'admin'], ['Mathieu', 'employe'], ['Cédric', 'employe'],
   ['Didier', 'employe'], ['Daniel', 'employe'], ['Mathis', 'employe'],
 ];
@@ -156,11 +156,35 @@ function load() {
   s.employes = s.employes || [];
   s.absences = s.absences || [];
   s.feries = s.feries || [];
+  let changed = false;
   if (!s.secret) {
     s.secret = crypto.randomBytes(32).toString('hex');
-    save(s);
+    changed = true;
   }
+  if (migrate(s)) changed = true;
+  if (changed) save(s);
   return s;
+}
+
+// Ajustements ponctuels demandés par Jérôme, appliqués UNE seule fois
+// (le drapeau dans s.migrations évite de défaire ce qu'il change ensuite
+// dans l'onglet Gestion).
+function migrate(s) {
+  s.migrations = s.migrations || {};
+  if (s.migrations['2026-10-08-kiev-paye']) return false;
+  const norm = (n) => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  // Retirer Kiev (désactivé seulement s'il a déjà des absences, pour garder l'historique)
+  const kiev = s.employes.find((e) => norm(e.nom) === 'kiev');
+  if (kiev) {
+    if (s.absences.some((a) => a.employeId === kiev.id)) kiev.actif = false;
+    else s.employes = s.employes.filter((e) => e.id !== kiev.id);
+  }
+  // Accès Paye pour Isabelle et Rosalie (sans toucher à un admin)
+  for (const e of s.employes) {
+    if (['isabelle', 'rosalie'].includes(norm(e.nom)) && e.role !== 'admin') e.role = 'paye';
+  }
+  s.migrations['2026-10-08-kiev-paye'] = new Date().toISOString();
+  return true;
 }
 
 function save(state) {
