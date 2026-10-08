@@ -15,7 +15,17 @@ function safeEqual(a, b) {
 // notification Pushover sur le telephone du destinataire) et ses deux
 // routes API ne doivent PAS exiger les identifiants du dashboard, sinon
 // l'employe se retrouve avec une demande de login qu'il n'a pas.
-const PUBLIC_PATHS = [/^\/confirm\.html$/, /^\/api\/notify\/[^/]+\/(status|ack)$/];
+//
+// Calendrier des absences: les employes du bureau n'ont pas acces au
+// dashboard des ventes. La page et son API ont leur propre connexion
+// (nom + NIP par employe, voir server/routes/absences.js).
+const PUBLIC_PATHS = [
+  /^\/confirm\.html$/,
+  /^\/api\/notify\/[^/]+\/(status|ack)$/,
+  /^\/absences\.html$/,
+  /^\/api\/absences(\/.*)?$/,
+  /^\/assets\/proludik-p\.png$/,
+];
 
 function isPublicPath(path) {
   return PUBLIC_PATHS.some((re) => re.test(path));

@@ -4,6 +4,7 @@ const config = require('./config');
 const apiRoutes = require('./routes/api');
 const notifyRoutes = require('./routes/notify');
 const boostRoutes = require('./routes/boost');
+const absencesRoutes = require('./routes/absences');
 const scheduler = require('./scheduler');
 const { logOutboundIp } = require('./diagnostics');
 const basicAuth = require('./basicAuth');
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use('/api', apiRoutes);
 app.use('/api/notify', notifyRoutes);
 app.use('/api/boost', boostRoutes);
+app.use('/api/absences', absencesRoutes);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.listen(config.port, () => {
