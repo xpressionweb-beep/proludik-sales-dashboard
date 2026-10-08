@@ -628,3 +628,18 @@ Page `boost.html` pour la réunion ventes et marketing du mardi. On partage l'é
 - **Remise à zéro** : dans « Équipe et réglages », efface les piges, bilans et l'historique (garde les missions et l'équipe). Pratique après des tests.
 - **Données** : tout est dans `boost.json`, dans `DATA_DIR` (le disque persistant). Les 15 missions de départ (`server/boost/defaultDefis.js`) servent seulement si le fichier n'existe pas encore.
 
+
+## Absences (vacances et congés du staff bureau)
+
+Page `absences.html`, qui remplace le fichier Excel « Absences ». Les employés entrent leurs demandes, Jérôme approuve, la paye sort son rapport.
+
+- **Accès séparé du dashboard** : la page et `/api/absences/*` ne demandent PAS le mot de passe du dashboard (les employés n'ont pas accès aux ventes). Chacun se connecte avec son nom + un NIP personnel (4 à 8 chiffres); la session dure 30 jours. 5 NIP ratés = 15 min de blocage pour ce nom.
+- **Rôles** (onglet Gestion) : *Employé* (calendrier + ses demandes), *Paye* (voit tout + rapport paye), *Admin* (approuve, saisit pour les autres, gère employés/NIP/fériés).
+- **Démarrage** : mettre `ABSENCES_ADMIN_PIN` dans Render. Jérôme se connecte avec ce NIP, l'app lui fait choisir son NIP perso, puis il crée le NIP de chaque employé dans Gestion.
+- **Demandes** : statut En attente → Approuvée / Refusée. L'employé peut annuler une demande en attente; une absence approuvée ne s'annule que par l'admin. Les chevauchements et les périodes sans jour ouvrable sont refusés. Demi-journée possible sur une journée seule.
+- **Avis** : chaque nouvelle demande envoie un Pushover à `ABSENCES_PUSHOVER_DEVICE` (défaut `iphone-je`) avec un lien vers l'onglet À approuver.
+- **Confidentialité** : un employé voit les absences des collègues comme « Absent », sans le type (ex. maladie) ni la note. Paye et Admin voient le détail.
+- **Paye** : période au choix, seulement les absences approuvées, jours ouvrables comptés à l'intérieur de la période (lun-ven, fériés exclus). Export Excel (onglets Sommaire et Détail).
+- **Fériés** : les 8 fériés légaux du Québec de l'année courante et de la suivante sont créés au départ (Vendredi saint par défaut). Gestion permet d'ajouter les congés maison et les fériés d'une autre année d'un clic.
+- **Transférer l'ancien Excel** : en admin, « Mes absences » → choisir l'employé, cocher « Approuver tout de suite ».
+- **Données** : tout est dans `absences.json`, dans `DATA_DIR` (le disque persistant). Les 10 noms de départ viennent de l'ancien Excel.
