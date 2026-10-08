@@ -83,38 +83,8 @@ function noteFailure(id) {
   else failures.set(id, { count: f.count + 1, last: Date.now() });
 }
 
-// NIP de départ de l'admin, tant qu'il ne s'en est pas choisi un dans l'app.
-function adminBootstrapPin() {
-  return process.env.ABSENCES_ADMIN_PIN || '';
-}
-
-// ---------- Codes d'activation ----------
-// L'admin génère un code à usage unique; l'employé l'entre à sa 1re
-// connexion (ou s'il a oublié son NIP) et choisit lui-même son NIP.
-// L'admin ne connaît donc jamais le NIP des employés.
-const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sans 0/O, 1/I/L
-const CODE_JOURS = 14;
-
-function newCode() {
-  const bytes = crypto.randomBytes(6);
-  const c = [...bytes].map((b) => CODE_ALPHA[b % CODE_ALPHA.length]).join('');
-  return `${c.slice(0, 3)}-${c.slice(3)}`;
-}
-const normCode = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-function activationValide(e) {
-  return Boolean(e.activation && e.activation.exp > Date.now());
-}
-
-function creerActivation(emp) {
-  const code = newCode();
-  emp.activation = { ...store.hashPin(normCode(code)), exp: Date.now() + CODE_JOURS * 86400000 };
-  failures.delete(emp.id);
-  return code;
-}
-
 function validPin(pin) {
-  return /^\d{4,8}$/.test(String(pin || ''));
+  return /^\d{4,6}$/.test(String(pin || ''));
 }
 
 // ---------- Middleware ----------
@@ -146,7 +116,7 @@ const canSeeAll = (me) => me.role === 'admin' || me.role === 'paye';
 
 function empPublic(e, full) {
   const o = { id: e.id, nom: e.nom, actif: e.actif };
-  if (full) Object.assign(o, { role: e.role, nipDefini: Boolean(e.pin), activationEnAttente: activationValide(e) });
+  if (full) Object.assign(o, { role: e.role, nipDefini: Boolean(e.pin) });
   return o;
 }
 
@@ -154,8 +124,10 @@ function absView(a, state, me) {
   const mine = a.employeId === me.id;
   const jours = store.joursOuvrables(a, state.feries);
   if (mine || canSeeAll(me)) return { ...a, jours };
-  // Les collègues voient seulement « absent » aux dates, sans motif ni note.
-  return { id: a.id, employeId: a.employeId, debut: a.debut, fin: a.fin, demi: a.demi, statut: a.statut, type: null, jours };
+  // Tout le monde voit le tableau complet (dates, type, statut), comme
+  // dans l'ancien Excel. Seules la note et la réponse de l'admin restent
+  // privées (la personne concernée, la paye et l'admin).
+  return { id: a.id, employeId: a.employeId, debut: a.debut, fin: a.fin, demi: a.demi, statut: a.statut, type: a.type, jours };
 }
 
 // ---------- Pushover (avis à l'admin pour chaque nouvelle demande) ----------
@@ -195,8 +167,7 @@ router.get('/login-list', withState((req, res, state) => {
   res.json({
     employes: actifs.map((e) => ({
       id: e.id, nom: e.nom,
-      pret: Boolean(e.pin) || (e.role === 'admin' && Boolean(adminBootstrapPin())),
-      activation: activationValide(e),
+      pret: Boolean(e.pin),
     })),
   });
 }));
@@ -207,18 +178,10 @@ router.post('/login', withState((req, res, state) => {
   if (!emp) return res.status(400).json({ error: 'Choisis ton nom.' });
   if (isLocked(emp.id)) return res.status(429).json({ error: 'Trop d’essais. Réessaie dans 15 minutes.' });
 
-  let ok = false;
-  if (emp.pin) ok = store.checkPin(pin, emp.pin);
-  else if (emp.role === 'admin' && adminBootstrapPin()) {
-    const a = crypto.createHash('sha256').update(pin).digest();
-    const b = crypto.createHash('sha256').update(adminBootstrapPin()).digest();
-    ok = crypto.timingSafeEqual(a, b);
-  } else if (activationValide(emp)) {
-    return res.status(400).json({ error: "Première connexion : utilise le code d'activation reçu de Jérôme.", activation: true });
-  } else {
-    return res.status(400).json({ error: "Ton accès n'est pas encore activé. Demande un code d'activation à Jérôme." });
+  if (!emp.pin) {
+    return res.status(400).json({ error: 'Première connexion : choisis ton NIP.', premiere: true });
   }
-
+  const ok = store.checkPin(pin, emp.pin);
   if (!ok) {
     noteFailure(emp.id);
     return res.status(401).json({ error: 'NIP incorrect.' });
@@ -228,23 +191,17 @@ router.post('/login', withState((req, res, state) => {
   res.json({ ok: true });
 }));
 
-// 1re connexion ou NIP oublié: code d'activation + nouveau NIP choisi par l'employé.
-router.post('/activer', withState((req, res, state) => {
+// 1re connexion (ou après une réinitialisation par l'admin): la personne
+// choisit son NIP, qui reste bon tant qu'elle ne le change pas.
+// Seulement possible si aucun NIP n'existe encore pour ce nom.
+router.post('/premiere', withState((req, res, state) => {
   const emp = state.employes.find((e) => e.id === req.body?.employeId && e.actif);
   if (!emp) return res.status(400).json({ error: 'Choisis ton nom.' });
-  if (isLocked(emp.id)) return res.status(429).json({ error: 'Trop d’essais. Réessaie dans 15 minutes.' });
-  if (!activationValide(emp)) {
-    return res.status(400).json({ error: "Aucun code d'activation valide pour ce nom (expiré?). Demande-en un nouveau à Jérôme." });
-  }
-  if (!store.checkPin(normCode(req.body?.code), emp.activation)) {
-    noteFailure(emp.id);
-    return res.status(401).json({ error: "Code d'activation incorrect." });
-  }
+  if (emp.pin) return res.status(400).json({ error: 'Ce nom a déjà un NIP. Si ce n’est pas toi qui l’as choisi, avertis Jérôme.' });
   const pin = String(req.body?.pin || '');
-  if (!validPin(pin)) return res.status(400).json({ error: 'Le NIP doit avoir de 4 à 8 chiffres.' });
+  if (!validPin(pin)) return res.status(400).json({ error: 'Le NIP doit avoir de 4 à 6 chiffres.' });
   emp.pin = store.hashPin(pin);
   emp.pinVer = (emp.pinVer || 0) + 1;
-  delete emp.activation;
   failures.delete(emp.id);
   store.save(state);
   setCookie(req, res, makeToken(state, emp), SESSION_DAYS * 86400);
@@ -263,7 +220,7 @@ router.get('/me', need(null, (req, res, state, me) => {
 // Changer son propre NIP
 router.post('/pin', need(null, (req, res, state, me) => {
   const nouveau = String(req.body?.nouveau || '');
-  if (!validPin(nouveau)) return res.status(400).json({ error: 'Le NIP doit avoir de 4 à 8 chiffres.' });
+  if (!validPin(nouveau)) return res.status(400).json({ error: 'Le NIP doit avoir de 4 à 6 chiffres.' });
   const emp = state.employes.find((e) => e.id === me.id);
   emp.pin = store.hashPin(nouveau);
   emp.pinVer = (emp.pinVer || 0) + 1;
@@ -479,33 +436,14 @@ router.put('/admin/employes/:id', need(['admin'], (req, res, state, me) => {
   res.json({ ok: true });
 }));
 
-// Code d'activation pour un employé (1re fois ou NIP oublié). Son NIP
-// actuel reste valide jusqu'à ce qu'il en choisisse un nouveau.
-router.post('/admin/employes/:id/activation', need(['admin'], (req, res, state) => {
-  const emp = state.employes.find((e) => e.id === req.params.id && e.actif);
-  if (!emp) return res.status(404).json({ error: 'Introuvable.' });
-  const code = creerActivation(emp);
-  store.save(state);
-  res.json({ codes: [{ id: emp.id, nom: emp.nom, code }], jours: CODE_JOURS });
-}));
-
-// Codes pour tous les employés actifs qui n'ont pas encore de NIP.
-router.post('/admin/activations', need(['admin'], (req, res, state, me) => {
-  const codes = state.employes
-    .filter((e) => e.actif && !e.pin && e.id !== me.id)
-    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-    .map((e) => ({ id: e.id, nom: e.nom, code: creerActivation(e) }));
-  store.save(state);
-  res.json({ codes, jours: CODE_JOURS });
-}));
-
-// L'admin crée / réinitialise le NIP d'un employé (coupe ses sessions).
-router.post('/admin/employes/:id/pin', need(['admin'], (req, res, state) => {
+// Réinitialiser le NIP (oublié, ou choisi par quelqu'un d'autre): efface
+// le NIP et coupe les sessions; la personne en choisit un nouveau à sa
+// prochaine connexion.
+router.post('/admin/employes/:id/reset', need(['admin'], (req, res, state, me) => {
   const emp = state.employes.find((e) => e.id === req.params.id);
   if (!emp) return res.status(404).json({ error: 'Introuvable.' });
-  const pin = String(req.body?.pin || '');
-  if (!validPin(pin)) return res.status(400).json({ error: 'Le NIP doit avoir de 4 à 8 chiffres.' });
-  emp.pin = store.hashPin(pin);
+  if (emp.id === me.id) return res.status(400).json({ error: 'Change ton propre NIP avec « Mon NIP ».' });
+  emp.pin = null;
   emp.pinVer = (emp.pinVer || 0) + 1;
   failures.delete(emp.id);
   store.save(state);

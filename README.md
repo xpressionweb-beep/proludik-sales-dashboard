@@ -633,14 +633,14 @@ Page `boost.html` pour la réunion ventes et marketing du mardi. On partage l'é
 
 Page `absences.html`, qui remplace le fichier Excel « Absences ». Les employés entrent leurs demandes, Jérôme approuve, la paye sort son rapport.
 
-- **Accès séparé du dashboard** : la page et `/api/absences/*` ne demandent PAS le mot de passe du dashboard (les employés n'ont pas accès aux ventes). Chacun se connecte avec son nom + un NIP personnel (4 à 8 chiffres); la session dure 30 jours. 5 NIP ratés = 15 min de blocage pour ce nom.
+- **Accès séparé du dashboard** : la page et `/api/absences/*` ne demandent PAS le mot de passe du dashboard (les employés n'ont pas accès aux ventes). Chacun choisit son nom; à sa 1re connexion il choisit son NIP (4 à 6 chiffres), qui reste bon tant qu'il ne le change pas (« Mon NIP »). Session de 30 jours. 5 NIP ratés = 15 min de blocage pour ce nom.
 - **Rôles** (onglet Gestion) : *Employé* (calendrier + ses demandes), *Paye* (voit tout + rapport paye), *Admin* (approuve, saisit pour les autres, gère employés/NIP/fériés).
-- **Démarrage** : mettre `ABSENCES_ADMIN_PIN` dans Render. Jérôme se connecte avec ce NIP, l'app lui fait choisir son NIP perso.
-- **Codes d'activation** : dans Gestion, « Codes pour tous ceux pas encore activés » (ou le bouton d'un employé) génère un code à usage unique, valide 14 jours, affiché une seule fois (copier ou imprimer des fiches). L'employé choisit son nom, entre le code et choisit lui-même son NIP; l'admin ne connaît jamais les NIP. « NIP oublié » = nouveau code; l'ancien NIP reste bon jusqu'à l'activation, puis ses anciennes sessions sont coupées. Les codes sont stockés hachés.
+- **Démarrage** : Jérôme se connecte en premier après le déploiement pour prendre son NIP admin (avant ça, n'importe qui avec le lien pourrait choisir ce nom).
+- **NIP oublié ou nom « volé »** : Gestion → « Réinitialiser NIP » efface le NIP et coupe les sessions; la personne en choisit un nouveau à sa prochaine connexion. Un nom qui a déjà un NIP ne peut pas être repris sans cette réinitialisation.
 - **Demandes** : statut En attente → Approuvée / Refusée. L'employé peut annuler une demande en attente; une absence approuvée ne s'annule que par l'admin. Les chevauchements et les périodes sans jour ouvrable sont refusés. Demi-journée possible sur une journée seule.
 - **Avis** : chaque nouvelle demande envoie un Pushover à `ABSENCES_PUSHOVER_DEVICE` (défaut `iphone-je`) avec un lien vers l'onglet À approuver.
-- **Confidentialité** : un employé voit les absences des collègues comme « Absent », sans le type (ex. maladie) ni la note. Paye et Admin voient le détail.
+- **Tableau complet pour tous** : chaque employé voit le calendrier de toute l'équipe avec le type de chaque absence (comme l'ancien Excel). Seules les notes restent visibles uniquement par la personne concernée, la paye et l'admin.
 - **Paye** : période au choix, seulement les absences approuvées, jours ouvrables comptés à l'intérieur de la période (lun-ven, fériés exclus). Export Excel (onglets Sommaire et Détail).
 - **Fériés** : les 8 fériés légaux du Québec de l'année courante et de la suivante sont créés au départ (Vendredi saint par défaut). Gestion permet d'ajouter les congés maison et les fériés d'une autre année d'un clic.
 - **Transférer l'ancien Excel** : en admin, « Mes absences » → choisir l'employé, cocher « Approuver tout de suite ».
-- **Données** : tout est dans `absences.json`, dans `DATA_DIR` (le disque persistant). Les 10 noms de départ viennent de l'ancien Excel.
+- **Données** : tout est dans `absences.json`, dans `DATA_DIR` (le disque persistant). Les 9 noms de départ viennent de l'ancien Excel.

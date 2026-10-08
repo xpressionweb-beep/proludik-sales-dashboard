@@ -173,24 +173,21 @@ section[data-view=gestion]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
     </label>
     <div id="mode-nip">
       <label class="f">Ton NIP
-        <input id="login-pin" class="pin" type="password" inputmode="numeric" autocomplete="current-password" pattern="\d*" maxlength="8">
+        <input id="login-pin" class="pin" type="password" inputmode="numeric" autocomplete="current-password" pattern="\d*" maxlength="6">
       </label>
     </div>
     <div id="mode-act" hidden>
-      <p class="hint" style="margin-bottom:10px">Première connexion ou NIP oublié : entre le code reçu de Jérôme, puis choisis ton NIP (4 à 8 chiffres, seulement toi le connais).</p>
-      <label class="f">Code d'activation
-        <input id="act-code" class="pin" autocomplete="one-time-code" autocapitalize="characters" maxlength="9" placeholder="ABC-123">
-      </label>
-      <label class="f" style="margin-top:10px">Choisis ton NIP
-        <input id="act-pin" class="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="\d*" maxlength="8">
+      <p class="hint" style="margin-bottom:10px">Première connexion : choisis ton NIP (4 à 6 chiffres). C'est lui que tu utiliseras ensuite; garde-le pour toi.</p>
+      <label class="f">Choisis ton NIP
+        <input id="act-pin" class="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="\d*" maxlength="6">
       </label>
       <label class="f" style="margin-top:10px">Confirme ton NIP
-        <input id="act-pin2" class="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="\d*" maxlength="8">
+        <input id="act-pin2" class="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="\d*" maxlength="6">
       </label>
     </div>
     <p class="err" id="login-err" hidden></p>
     <button class="btn btn-red" type="submit" id="login-btn">Entrer</button>
-    <button class="link" type="button" id="mode-toggle">J'ai un code d'activation</button>
+    <p class="hint">NIP oublié? Demande à Jérôme de le réinitialiser.</p>
   </form>
 </div>
 
@@ -287,8 +284,7 @@ section[data-view=gestion]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
     <div class="panel">
       <div class="panel-h"><h2>Employés</h2></div>
       <p class="hint"><b>Rôles</b> — Employé : ses demandes + calendrier. Paye : voit tout et le rapport paye. Admin : approuve et gère.</p>
-      <p class="hint"><b>Accès</b> — Donne un code d'activation à l'employé; il choisit lui-même son NIP à sa 1re connexion. Même chose s'il oublie son NIP. Un code est bon 14 jours.</p>
-      <button class="btn btn-navy btn-sm" type="button" id="act-all">Codes pour tous ceux pas encore activés</button>
+      <p class="hint"><b>Accès</b> — À sa 1re connexion, chacun choisit son NIP. NIP oublié (ou choisi par quelqu'un d'autre)? « Réinitialiser » : la personne en choisit un nouveau à sa prochaine connexion.</p>
       <div id="emp-list"></div>
       <form class="inline" id="emp-add">
         <input id="emp-nom" placeholder="Nom du nouvel employé" maxlength="40" required>
@@ -315,23 +311,11 @@ section[data-view=gestion]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 <div class="modal" id="pin-modal" hidden>
   <form class="panel" id="pin-form">
     <div class="panel-h"><h2 id="pin-title">Mon NIP</h2></div>
-    <p class="hint" id="pin-hint">Choisis un NIP de 4 à 8 chiffres.</p>
-    <input id="pin-new" class="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="\d{4,8}" maxlength="8" required>
+    <p class="hint" id="pin-hint">Choisis un NIP de 4 à 6 chiffres.</p>
+    <input id="pin-new" class="pin" type="password" inputmode="numeric" autocomplete="new-password" pattern="\d{4,6}" maxlength="6" required>
     <p class="err" id="pin-err" hidden></p>
     <div class="inline"><button class="btn btn-ghost" type="button" id="pin-cancel">Annuler</button><button class="btn btn-red" type="submit">Enregistrer</button></div>
   </form>
-</div>
-<div class="modal" id="codes-modal" hidden>
-  <div class="panel" style="width:min(460px,100%)">
-    <div class="panel-h"><h2>Codes d'activation</h2></div>
-    <p class="hint" id="codes-hint"></p>
-    <div id="codes-list"></div>
-    <div class="inline">
-      <button class="btn btn-ghost" type="button" id="codes-close">Fermer</button>
-      <button class="btn btn-ghost" type="button" id="codes-copy">Copier</button>
-      <button class="btn btn-red" type="button" id="codes-print">Imprimer les fiches</button>
-    </div>
-  </div>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -395,13 +379,12 @@ let actMode = false;
 function setActMode(on) {
   actMode = on;
   $('#mode-nip').hidden = on; $('#mode-act').hidden = !on;
-  $('#login-btn').textContent = on ? 'Activer mon accès' : 'Entrer';
-  $('#mode-toggle').textContent = on ? "J'ai déjà un NIP" : "J'ai un code d'activation";
+  $('#login-btn').textContent = on ? 'Enregistrer mon NIP' : 'Entrer';
   $('#login-err').hidden = true;
 }
 function autoMode() {
   const e = loginList.find((x) => x.id === $('#login-emp').value);
-  if (e) setActMode(!e.pret);
+  setActMode(Boolean(e && !e.pret));
 }
 async function showLogin() {
   $('#v-app').hidden = true; $('#v-login').hidden = false;
@@ -409,13 +392,12 @@ async function showLogin() {
     const { employes } = await api('/login-list');
     loginList = employes;
     $('#login-emp').innerHTML = '<option value="">— Choisis —</option>' +
-      employes.map((e) => `<option value="${e.id}">${esc(e.nom)}${e.pret ? '' : e.activation ? ' (1re connexion)' : ' (pas encore activé)'}</option>`).join('');
+      employes.map((e) => `<option value="${e.id}">${esc(e.nom)}${e.pret ? '' : ' (1re connexion)'}</option>`).join('');
     try { const last = localStorage.getItem('abs_last'); if (last && employes.some((e) => e.id === last)) $('#login-emp').value = last; } catch {}
     autoMode();
   } catch (e) { $('#login-err').textContent = e.message; $('#login-err').hidden = false; }
 }
 $('#login-emp').addEventListener('change', autoMode);
-$('#mode-toggle').addEventListener('click', () => setActMode(!actMode));
 $('#login-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const err = $('#login-err'); err.hidden = true;
@@ -423,10 +405,10 @@ $('#login-form').addEventListener('submit', async (ev) => {
   try {
     if (actMode) {
       const pin = $('#act-pin').value;
-      if (!/^\d{4,8}$/.test(pin)) throw new Error('Le NIP doit avoir de 4 à 8 chiffres.');
+      if (!/^\d{4,6}$/.test(pin)) throw new Error('Le NIP doit avoir de 4 à 6 chiffres.');
       if (pin !== $('#act-pin2').value) throw new Error('Les deux NIP ne sont pas pareils.');
-      await api('/activer', { method: 'POST', body: { employeId, code: $('#act-code').value, pin } });
-      ['#act-code', '#act-pin', '#act-pin2'].forEach((s) => ($(s).value = ''));
+      await api('/premiere', { method: 'POST', body: { employeId, pin } });
+      ['#act-pin', '#act-pin2'].forEach((s) => ($(s).value = ''));
     } else {
       await api('/login', { method: 'POST', body: { employeId, pin: $('#login-pin').value } });
       $('#login-pin').value = '';
@@ -451,7 +433,6 @@ async function boot() {
   const h = location.hash.slice(1);
   const wanted = $(`.tab[data-tab="${h}"]`);
   showTab(wanted && !wanted.hidden ? h : tab);
-  if (S.me.role === 'admin' && !S.me.nipPerso) openPin(null, 'Bienvenue! Choisis ton NIP personnel pour remplacer le NIP de départ.');
 }
 async function refresh() { await load(); render(); }
 
@@ -505,7 +486,6 @@ function renderCal() {
   }
   $('#cal').innerHTML = h + '</tbody>';
   const leg = Object.entries(S.types).map(([k, t]) => `<span><i style="background:var(--t-${k})"></i>${esc(t.label)}</span>`);
-  if (!seesAll()) leg.push('<span><i style="background:var(--t-absent)"></i>Absent (collègue)</span>');
   leg.push('<span><i style="background:var(--t-ferie)"></i>Férié</span>');
   $('#legend').innerHTML = leg.join('');
 }
@@ -636,9 +616,9 @@ async function loadPaye() {
 function renderGestion() {
   const emps = S.employes.slice().sort((a, b) => (b.actif - a.actif) || a.nom.localeCompare(b.nom, 'fr'));
   $('#emp-list').innerHTML = emps.map((e) => `<div class="emp ${e.actif ? '' : 'off'}">
-    <div class="nm">${esc(e.nom)}<small>${e.nipDefini ? 'Accès activé' : e.activationEnAttente ? '⏳ Code remis, en attente' : '⚠️ Pas encore activé'}${e.nipDefini && e.activationEnAttente ? ' · nouveau code en attente' : ''}${e.actif ? '' : ' · inactif'}</small></div>
+    <div class="nm">${esc(e.nom)}<small>${e.nipDefini ? 'NIP choisi' : '⏳ Pas encore connecté'}${e.actif ? '' : ' · inactif'}</small></div>
     <div class="ctl"><select data-role-for="${e.id}" aria-label="Rôle de ${esc(e.nom)}">${Object.entries(ROLE_LBL).map(([k, l]) => `<option value="${k}" ${k === e.role ? 'selected' : ''}>${l}</option>`).join('')}</select>
-    ${e.id === S.me.id ? '' : `<button class="btn btn-ghost btn-sm" data-code-for="${e.id}" type="button" ${e.actif ? '' : 'disabled'}>${e.nipDefini ? 'NIP oublié' : "Code d'activation"}</button>`}
+    ${e.id === S.me.id || !e.nipDefini ? '' : `<button class="btn btn-ghost btn-sm" data-reset-for="${e.id}" type="button">Réinitialiser NIP</button>`}
     <button class="btn btn-ghost btn-sm" data-act-for="${e.id}" data-actif="${e.actif ? 0 : 1}" type="button">${e.actif ? 'Désactiver' : 'Réactiver'}</button></div></div>`).join('');
   const yr = S.today.slice(0, 4);
   $('#fer-annee').value = $('#fer-annee').value || Number(yr) + 1;
@@ -652,11 +632,11 @@ document.addEventListener('change', async (ev) => {
   catch (e) { toast(e.message); await refresh(); }
 });
 document.addEventListener('click', async (ev) => {
-  const c = ev.target.closest('[data-code-for]');
+  const c = ev.target.closest('[data-reset-for]');
   if (c) {
-    const e = S.employes.find((x) => x.id === c.dataset.codeFor);
-    if (e.nipDefini && !confirm(`Donner un nouveau code à ${e.nom}? Son NIP actuel reste bon jusqu'à ce qu'il en choisisse un nouveau.`)) return;
-    try { showCodes(await api(`/admin/employes/${e.id}/activation`, { method: 'POST' })); await refresh(); } catch (err) { toast(err.message); }
+    const nom = empName(c.dataset.resetFor);
+    if (!confirm(`Réinitialiser le NIP de ${nom}? Il devra en choisir un nouveau à sa prochaine connexion.`)) return;
+    try { await api(`/admin/employes/${c.dataset.resetFor}/reset`, { method: 'POST' }); toast(`NIP de ${nom} réinitialisé.`); await refresh(); } catch (err) { toast(err.message); }
   }
   const a = ev.target.closest('[data-act-for]');
   if (a) { try { await api(`/admin/employes/${a.dataset.actFor}`, { method: 'PUT', body: { actif: a.dataset.actif === '1' } }); await refresh(); } catch (e) { toast(e.message); } }
@@ -665,7 +645,7 @@ document.addEventListener('click', async (ev) => {
 });
 $('#emp-add').addEventListener('submit', async (ev) => {
   ev.preventDefault();
-  try { await api('/admin/employes', { method: 'POST', body: { nom: $('#emp-nom').value } }); $('#emp-nom').value = ''; toast("Employé ajouté. Donne-lui un code d'activation."); await refresh(); setupForm(); }
+  try { await api('/admin/employes', { method: 'POST', body: { nom: $('#emp-nom').value } }); $('#emp-nom').value = ''; toast('Employé ajouté. Il choisira son NIP à sa 1re connexion.'); await refresh(); setupForm(); }
   catch (e) { toast(e.message); }
 });
 $('#fer-add').addEventListener('submit', async (ev) => {
@@ -678,47 +658,11 @@ $('#fer-annee-btn').addEventListener('click', async () => {
   catch (e) { toast(e.message); }
 });
 
-// ---------- codes d'activation ----------
-let lastCodes = [];
-const pageUrl = () => location.origin + location.pathname;
-function showCodes(r) {
-  lastCodes = r.codes;
-  $('#codes-hint').textContent = r.codes.length
-    ? `Remets à chacun son code (en personne, par Teams ou par texto). Bon ${r.jours} jours, une seule fois. Ils ne s'afficheront plus après la fermeture de cette fenêtre.`
-    : 'Tout le monde est déjà activé ou a un code en attente.';
-  $('#codes-list').innerHTML = r.codes.map((c) => `<div class="fer"><b>${esc(c.nom)}</b><code style="font-size:20px;letter-spacing:2px;font-weight:700">${esc(c.code)}</code></div>`).join('');
-  $('#codes-copy').hidden = $('#codes-print').hidden = !r.codes.length;
-  $('#codes-modal').hidden = false;
-}
-$('#act-all').addEventListener('click', async () => {
-  if (!confirm('Générer un code pour chaque employé actif qui n’a pas encore choisi son NIP? (Les anciens codes en attente seront remplacés.)')) return;
-  try { showCodes(await api('/admin/activations', { method: 'POST' })); await refresh(); } catch (e) { toast(e.message); }
-});
-$('#codes-close').addEventListener('click', () => { $('#codes-modal').hidden = true; lastCodes = []; });
-$('#codes-copy').addEventListener('click', async () => {
-  const txt = lastCodes.map((c) => `${c.nom} : ${c.code}`).join('\n') + `\n\nLien : ${pageUrl()}`;
-  try { await navigator.clipboard.writeText(txt); toast('Copié.'); } catch { toast('Copie impossible ici.'); }
-});
-$('#codes-print').addEventListener('click', () => {
-  const w = window.open('', '_blank');
-  if (!w) return toast('Autorise les fenêtres pour imprimer.');
-  const fiche = (c) => `<div class="f"><h2>Absences Proludik</h2><p>Bonjour <b>${esc(c.nom)}</b>, voici ton accès au calendrier des absences.</p>
-    <ol><li>Va sur <b>${esc(pageUrl())}</b> (garde-le dans tes favoris).</li><li>Choisis ton nom.</li>
-    <li>Entre ton code d'activation : <span class="c">${esc(c.code)}</span></li><li>Choisis ton NIP (4 à 8 chiffres). C'est lui que tu utiliseras ensuite.</li></ol>
-    <p class="s">Code à usage unique, valide 14 jours. NIP oublié? Demande un nouveau code à Jérôme.</p></div>`;
-  w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fiches d'activation</title><style>
-    body{font-family:system-ui,sans-serif;color:#17223f;margin:0;padding:16px}
-    .f{border:2px dashed #9aa3bd;border-radius:10px;padding:16px 20px;margin-bottom:16px;page-break-inside:avoid}
-    h2{margin:0 0 6px;font-size:20px;color:#1f2f55}.c{font-size:22px;font-weight:800;letter-spacing:3px;border:2px solid #e3263a;border-radius:6px;padding:2px 8px}
-    li{margin:6px 0}.s{font-size:12px;color:#5b6582;margin:8px 0 0}</style></head><body>${lastCodes.map(fiche).join('')}</body></html>`);
-  w.document.close(); w.focus(); w.print();
-});
-
 // ---------- NIP ----------
 function openPin(target, hint) {
   pinTarget = target;
   $('#pin-title').textContent = target ? 'NIP de ' + empName(target) : 'Mon NIP';
-  $('#pin-hint').textContent = hint || 'Choisis un nouveau NIP de 4 à 8 chiffres.';
+  $('#pin-hint').textContent = hint || 'Choisis un nouveau NIP de 4 à 6 chiffres.';
   $('#pin-err').hidden = true; $('#pin-new').value = '';
   $('#pin-modal').hidden = false; $('#pin-new').focus();
 }
@@ -728,8 +672,7 @@ $('#pin-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const pin = $('#pin-new').value;
   try {
-    if (pinTarget) await api(`/admin/employes/${pinTarget}/pin`, { method: 'POST', body: { pin } });
-    else await api('/pin', { method: 'POST', body: { nouveau: pin } });
+    await api('/pin', { method: 'POST', body: { nouveau: pin } });
     $('#pin-modal').hidden = true; toast('NIP enregistré.'); await refresh();
   } catch (e) { $('#pin-err').textContent = e.message; $('#pin-err').hidden = false; }
 });
