@@ -24,7 +24,7 @@ const ROLES = ['employe', 'paye', 'admin'];
 const DEFAULT_STAFF = [
   ['André', 'employe'], ['Isabelle', 'employe'], ['Rosalie', 'employe'],
   ['Jérôme', 'admin'], ['Mathieu', 'employe'], ['Cédric', 'employe'],
-  ['Didier', 'employe'], ['Daniel', 'employe'], ['Mathis', 'employe'], ['Kiev', 'employe'],
+  ['Didier', 'employe'], ['Daniel', 'employe'], ['Mathis', 'employe'],
 ];
 
 // ---------- Dates (toujours en chaînes AAAA-MM-JJ, calculs en UTC) ----------
