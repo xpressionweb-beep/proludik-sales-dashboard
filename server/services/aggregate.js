@@ -136,25 +136,42 @@ function pctChange(current, previous) {
   return ((current - previous) / previous) * 100;
 }
 
-// Variante de computeTotals() qui filtre sur "Date création" (quand le
-// dossier a ete ouvert/confirme) plutot que "Date" (date de l'evenement).
-// Utilisee pour "Semaine derniere" et "Ce mois" (voir getYoY/getTrend
-// ci-dessous): un contrat de location dont l'EVENEMENT tombe en fin de
-// semaine gonflait ces cartes meme si l'entreprise est fermee samedi-
-// dimanche - alors qu'on veut plutot suivre "combien a-t-on confirme
-// cette semaine", peu importe quand l'evenement aura lieu. "Annee
-// financiere" et les fenetres par division restent sur computeTotals()
-// (date d'evenement) pour matcher exactement le fichier de reference
-// d'Isabelle.
-function computeTotalsByCreatedDate(sales, start, end) {
+// Date a laquelle un dossier a ete VENDU (confirme/signe par le client):
+// "Date signature" si renseignee, sinon "Date création" (dossiers sans
+// signature saisie, ventes Shopify), sinon "Date" (evenement) en dernier
+// recours. C'est la date qui repond a "combien a-t-on vendu la semaine
+// derniere", peu importe quand l'evenement aura lieu dans l'annee.
+//
+// Pourquoi pas "Date création" seule (ancien comportement): un contrat
+// cree en juillet et signe en octobre etait compte en juillet - la carte
+// "Contrats confirmés (semaine dernière)" affichait ~275 $ alors que
+// ~29 700 $ de contrats avaient ete signes cette semaine-la. Et la
+// comparaison avec l'an dernier etait biaisee: les dossiers crees la meme
+// semaine l'an dernier ont eu un an pour etre signes (ils comptaient
+// tous), alors que ceux de la semaine derniere sont encore en Soumission.
+// "Date signature" est remplie sur ~85-95% des dossiers confirmes, autant
+// en 2025 qu'en 2026, donc la comparaison annee/annee reste equitable.
+function confirmedDate(sale) {
+  return sale.signedDate || sale.createdDate || sale.orderDate;
+}
+
+// Variante de computeTotals() qui filtre sur la date de vente
+// (confirmedDate ci-dessus) plutot que "Date" (date de l'evenement).
+// Utilisee pour "Semaine derniere" (voir getYoY/getTrend ci-dessous): un
+// contrat de location dont l'EVENEMENT tombe en fin de semaine gonflait
+// ces cartes meme si l'entreprise est fermee samedi-dimanche - alors qu'on
+// veut plutot suivre "combien a-t-on vendu cette semaine", peu importe
+// quand l'evenement aura lieu. "Ce mois", "Annee financiere" et les
+// fenetres par division (total annuel) restent sur computeTotals() (date
+// d'evenement) pour matcher exactement le fichier de reference d'Isabelle.
+function computeTotalsByConfirmedDate(sales, start, end) {
   const io = {};
   for (const status of config.io.statuses) io[status] = { amount: 0, count: 0 };
   io.Autre = { amount: 0, count: 0 };
   const shopify = { amount: 0, count: 0 };
 
   for (const sale of sales) {
-    const d = sale.createdDate || sale.orderDate;
-    if (!inRange(d, start, end)) continue;
+    if (!inRange(confirmedDate(sale), start, end)) continue;
     if (sale.source === 'io') {
       const bucket = config.io.statuses.includes(sale.status) ? sale.status : 'Autre';
       io[bucket].amount += sale.amount;
@@ -183,10 +200,10 @@ function computeTotalsByCreatedDate(sales, start, end) {
 // separee, mais inclus dans le sous-total pour que la somme retombe juste.
 const IO_TYPES = ['Location', 'Fabrication', 'Réparation', 'Vente'];
 
-function computeIoTypeTotals(sales, start, end) {
+function computeIoTypeTotals(sales, start, end, dateOf = (sale) => sale.orderDate) {
   const totals = { Location: 0, Fabrication: 0, Réparation: 0, Vente: 0, Autre: 0 };
   for (const sale of sales) {
-    if (!inRange(sale.orderDate, start, end)) continue;
+    if (!inRange(dateOf(sale), start, end)) continue;
     if (sale.source === 'shopify') {
       totals.Vente += sale.amount;
       continue;
@@ -221,11 +238,11 @@ function getYoY(referenceDate = new Date()) {
     const base = CARD_BASE_OFFSET[type] || 0;
     const cur = getBounds(type, base, referenceDate);
     const prevYear = getBounds(type, base + offset, referenceDate);
-    // "Semaine derniere": date de creation (voir computeTotalsByCreatedDate)
-    // - suit "combien a-t-on confirme cette semaine". "Ce mois" et "Annee
-    // financiere": date d'evenement (computeTotals), pour matcher le
+    // "Semaine derniere": date de vente (signature, sinon creation - voir
+    // confirmedDate) - suit "combien a-t-on vendu cette semaine". "Ce
+    // mois" et "Annee financiere": date d'evenement (computeTotals), pour matcher le
     // fichier de reference d'Isabelle.
-    const totalsFn = type === 'week' ? computeTotalsByCreatedDate : computeTotals;
+    const totalsFn = type === 'week' ? computeTotalsByConfirmedDate : computeTotals;
     const curTotals = totalsFn(sales, cur.start, cur.end);
     const prevYearTotals = totalsFn(sales, prevYear.start, prevYear.end);
 
@@ -405,11 +422,11 @@ function getTrend(cardType, referenceDate = new Date()) {
   if (cardType === 'week') {
     // Semaine derniere complete (lundi-dimanche) - voir CARD_BASE_OFFSET
     // dans getYoY() pour le meme choix applique a la grande carte. Date de
-    // creation (pas date d'evenement) - voir computeTotalsByCreatedDate.
+    // vente (pas date d'evenement) - voir confirmedDate.
     const { start, end } = getBounds('week', -1, referenceDate);
     for (let d = new Date(start); d < end; d = addDays(d, 1)) {
       const dayEnd = addDays(d, 1);
-      points.push({ label: d.toLocaleDateString('fr-CA', { weekday: 'short' }), amount: computeTotalsByCreatedDate(sales, d, dayEnd).grandTotal });
+      points.push({ label: d.toLocaleDateString('fr-CA', { weekday: 'short' }), amount: computeTotalsByConfirmedDate(sales, d, dayEnd).grandTotal });
     }
   } else if (cardType === 'month') {
     for (let offset = -2; offset <= 2; offset += 1) {
@@ -672,7 +689,9 @@ function getDivisionBreakdown(referenceDate = new Date()) {
   const lastWeek = getBounds('week', -1, referenceDate);
 
   const ytdTotals = computeIoTypeTotals(sales, fyStart, fyEnd);
-  const lastWeekTotals = computeIoTypeTotals(sales, lastWeek.start, lastWeek.end);
+  // Derniere semaine = ce qui a ete VENDU cette semaine-la (confirmedDate),
+  // comme la carte "Semaine derniere" - pas les evenements de la semaine.
+  const lastWeekTotals = computeIoTypeTotals(sales, lastWeek.start, lastWeek.end, confirmedDate);
   const divisionTargets = (objectifs.divisions && objectifs.divisions[fyLabel]) || {};
 
   const divisions = IO_TYPES.map((name) => {
@@ -767,8 +786,9 @@ function getBranchComparison(period = 'month', referenceDate = new Date()) {
 //
 // Bornes de temps (memes conventions que les grandes cartes de la vue
 // complete, voir getYoY):
-//   - Semaine derniere: lundi-dimanche complet, selon la DATE DE CREATION du
-//     dossier ("combien a-t-on confirme la semaine passee")
+//   - Semaine derniere: lundi-dimanche complet, selon la DATE DE VENTE du
+//     dossier (signature, sinon creation - voir confirmedDate): "combien
+//     a-t-on vendu la semaine passee", pour n'importe quand dans l'annee
 //   - Mois en cours: selon la DATE D'EVENEMENT ("combien a-t-on sur les
 //     livres pour ce mois-ci"), comme le fichier de reference d'Isabelle
 // Comparatif = meme periode de l'annee financiere precedente (semaine -52,
@@ -786,7 +806,7 @@ function sumWhere(sales, start, end, dateField, predicate) {
   let amount = 0;
   const ids = new Set();
   for (const sale of sales) {
-    const d = dateField === 'created' ? sale.createdDate || sale.orderDate : sale.orderDate;
+    const d = dateField === 'confirmed' ? confirmedDate(sale) : sale.orderDate;
     if (!inRange(d, start, end) || !predicate(sale)) continue;
     amount += sale.amount;
     ids.add(`${sale.source}:${sale.externalId}`);
@@ -839,7 +859,7 @@ function getSimpleSummary(referenceDate = new Date()) {
   return {
     fiscalYear: fyLabel,
     previousFiscalYear: fiscalYearLabel(fyLy.start),
-    lastWeek: byCategory(week, weekLy, 'created'),
+    lastWeek: byCategory(week, weekLy, 'confirmed'),
     currentMonth: byCategory(month, monthLy, 'event'),
     objective: {
       target,
