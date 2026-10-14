@@ -324,6 +324,13 @@ function buildRecords(rows) {
     // tout le reste du dashboard (chiffre d'affaires, cartes YoY, etc.).
     // Fallback sur orderDate si la colonne manque sur une ligne donnee.
     const createdDate = toIso(row['Date création']) || orderDate;
+    // "Date signature" = date a laquelle le client a signe/confirme le
+    // dossier - c'est elle qui dit "quand a-t-on vendu ce contrat" (un
+    // dossier cree en juillet et signe en octobre est une vente d'octobre).
+    // Vide sur ~10% des dossiers confirmes et sur les soumissions -> null,
+    // les calculs "semaine derniere" retombent alors sur createdDate (voir
+    // aggregate.confirmedDate).
+    const signedDate = toIso(row['Date signature']);
 
     const status = mapIoStatus(row['Statut simplifié']);
 
@@ -342,6 +349,7 @@ function buildRecords(rows) {
         currency: 'CAD',
         orderDate,
         createdDate,
+        signedDate,
       });
       continue;
     }
@@ -357,6 +365,7 @@ function buildRecords(rows) {
       currency: 'CAD',
       orderDate,
       createdDate,
+      signedDate,
       type: normalizeIoType(row['Type']),
       branch: normalizeBranch(row['Classe']),
     });
